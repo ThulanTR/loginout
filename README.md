@@ -17,11 +17,10 @@
 ### 2. 🔒 Güvenli Yönetici Girişi ve Şifre Kurtarma
 - **Varsayılan Kullanıcı Adı:** `admin`
 - **Varsayılan Şifre:** `admin123`
-- **Varsayılan Kurtarma Anahtarı (Master Key):** `admin-kurtarma-2026`
+- **Varsayılan Kurtarma Kodu (`.env`):** `kurtarma2026` (`ADMIN_RECOVERY_CODE`)
 - JWT tabanlı güvenli oturum yönetimi.
-- **Şifremi Unuttum (Arayüzden Kurtarma):** Giriş ekranındaki "Şifremi Unuttum?" linkine tıklayıp Kurtarma Anahtarı (Master Key) ile anında yeni şifre belirleyebilirsiniz.
+- **Şifremi Unuttum (Arayüzden Kolay Kurtarma):** Giriş ekranındaki "Şifremi Unuttum?" butonuna tıklayarak `.env` dosyanızdaki `ADMIN_RECOVERY_CODE` kurtarma kodunu girip anında yeni şifre belirleyebilirsiniz.
 - **Acil Durum CLI Script'i:** Terminalden `node reset-password.js YeniSifre123` çalıştırarak şifrenizi doğrudan sıfırlayabilirsiniz.
-- Yönetici panelinden hem giriş şifresini hem de kurtarma anahtarını kolayca güncelleyebilirsiniz.
 
 ### 3. 📊 Yönetici Kontrol Paneli (`/admin`)
 - **Bölüm A: Özet ve Dashboard Metrikleri:**

@@ -113,20 +113,27 @@ router.post('/change-password', authenticateToken, (req, res) => {
   }
 });
 
-// Kurtarma Anahtarı ile Şifre Sıfırlama (POST /api/auth/reset-password-recovery)
-router.post('/reset-password-recovery', (req, res) => {
-  const { username, recoveryKey, newPassword } = req.body;
+// Şifre Kurtarma (.env ADMIN_RECOVERY_CODE ile)
+router.post('/recover-password', (req, res) => {
+  const { recoveryCode, newPassword } = req.body;
 
-  if (!username || !recoveryKey || !newPassword) {
+  if (!recoveryCode || !newPassword) {
     return res.status(400).json({
       success: false,
-      message: 'Kullanıcı adı, kurtarma şifresi ve yeni şifre alanları zorunludur.'
+      message: 'Kurtarma kodu ve yeni şifre gereklidir.'
     });
   }
 
-  const cleanUser = String(username).trim();
-  const cleanKey = String(recoveryKey).trim();
+  const cleanCode = String(recoveryCode).trim();
   const cleanPass = String(newPassword).trim();
+  const expectedCode = (process.env.ADMIN_RECOVERY_CODE || 'kurtarma2026').trim();
+
+  if (!expectedCode || cleanCode !== expectedCode) {
+    return res.status(400).json({
+      success: false,
+      message: 'Kurtarma kodu hatalı!'
+    });
+  }
 
   if (cleanPass.length < 5) {
     return res.status(400).json({
@@ -136,20 +143,12 @@ router.post('/reset-password-recovery', (req, res) => {
   }
 
   try {
-    const admin = db.prepare('SELECT * FROM admins WHERE username = ?').get(cleanUser);
+    const admin = db.prepare('SELECT id, username FROM admins ORDER BY id ASC LIMIT 1').get();
 
-    if (!admin || !admin.recovery_key_hash) {
-      return res.status(400).json({
+    if (!admin) {
+      return res.status(404).json({
         success: false,
-        message: 'Kullanıcı adı veya Kurtarma Şifresi (Master Key) hatalı!'
-      });
-    }
-
-    const isMatch = bcrypt.compareSync(cleanKey, admin.recovery_key_hash);
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kurtarma Şifresi (Master Key) hatalı! Lütfen doğru anahtarı girdiğinizden emin olun.'
+        message: 'Kayıtlı yönetici hesabı bulunamadı.'
       });
     }
 
@@ -161,55 +160,10 @@ router.post('/reset-password-recovery', (req, res) => {
       message: 'Şifreniz başarıyla sıfırlandı. Yeni şifrenizle giriş yapabilirsiniz.'
     });
   } catch (error) {
-    console.error('Kurtarma şifresi sıfırlama hatası:', error);
+    console.error('Şifre kurtarma hatası:', error);
     res.status(500).json({
       success: false,
-      message: 'Şifre sıfırlanırken sunucu hatası oluştu.'
-    });
-  }
-});
-
-// Kurtarma Şifresi Güncelleme (POST /api/auth/change-recovery-key)
-router.post('/change-recovery-key', authenticateToken, (req, res) => {
-  const { currentPassword, newRecoveryKey } = req.body;
-
-  if (!currentPassword || !newRecoveryKey) {
-    return res.status(400).json({
-      success: false,
-      message: 'Mevcut hesap şifreniz ve yeni kurtarma şifresi zorunludur.'
-    });
-  }
-
-  const cleanKey = String(newRecoveryKey).trim();
-  if (cleanKey.length < 5) {
-    return res.status(400).json({
-      success: false,
-      message: 'Kurtarma şifresi en az 5 karakter olmalıdır.'
-    });
-  }
-
-  try {
-    const admin = db.prepare('SELECT * FROM admins WHERE id = ?').get(req.user.id);
-
-    if (!admin || !bcrypt.compareSync(currentPassword, admin.password_hash)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mevcut hesap şifreniz hatalı.'
-      });
-    }
-
-    const newRecoveryHash = bcrypt.hashSync(cleanKey, 10);
-    db.prepare('UPDATE admins SET recovery_key_hash = ? WHERE id = ?').run(newRecoveryHash, admin.id);
-
-    res.json({
-      success: true,
-      message: 'Kurtarma şifreniz (Master Key) başarıyla güncellendi. Lütfen bu şifreyi güvenli bir yerde saklayınız.'
-    });
-  } catch (error) {
-    console.error('Kurtarma şifresi değiştirme hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Kurtarma şifresi güncellenirken hata oluştu.'
+      message: 'Şifre güncellenirken sunucu hatası oluştu.'
     });
   }
 });

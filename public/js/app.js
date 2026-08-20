@@ -840,28 +840,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // ŞİFREMİ UNUTTUM / KURTARMA ANAHTARI AKIŞI
+    // ŞİFREMİ UNUTTUM / BASİT KURTARMA AKIŞI
     // ==========================================
     const forgotPassBtn = document.getElementById('forgotPasswordBtn');
     if (forgotPassBtn) {
       forgotPassBtn.addEventListener('click', async () => {
-        const defaultUser = document.getElementById('adminUsername')?.value.trim() || 'admin';
-
         const { value: formValues } = await Swal.fire({
-          title: '🔑 Şifre Sıfırlama (Kurtarma Anahtarı)',
+          title: '🔑 Şifre Sıfırlama',
           html: `
             <p class="text-xs text-slate-300 mb-3 text-left">
-              Hesabınızı kurtarmak için kullanıcı adınızı ve size tanımlı <strong>Kurtarma Şifrenizi (Master Key)</strong> giriniz.
+              Şifrenizi sıfırlamak için <code>.env</code> dosyanızdaki <strong>ADMIN_RECOVERY_CODE</strong> değerini ve yeni şifrenizi giriniz.
             </p>
             <div class="space-y-3 text-left">
               <div>
-                <label class="block text-xs text-slate-300 mb-1 font-medium">Kullanıcı Adı</label>
-                <input id="swal-recovery-user" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs" value="${defaultUser}">
-              </div>
-              <div>
-                <label class="block text-xs text-slate-300 mb-1 font-medium">Kurtarma Şifresi (Master Key)</label>
-                <input id="swal-recovery-key" type="password" placeholder="Kurtarma şifrenizi giriniz" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs">
-                <p class="text-[10px] text-slate-400 mt-0.5">Varsayılan anahtar: <code class="text-indigo-300 font-mono">admin-kurtarma-2026</code></p>
+                <label class="block text-xs text-slate-300 mb-1 font-medium">Kurtarma Kodu (ADMIN_RECOVERY_CODE)</label>
+                <input id="swal-recovery-code" type="password" placeholder="Kurtarma kodunuzu giriniz" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs">
               </div>
               <div>
                 <label class="block text-xs text-slate-300 mb-1 font-medium">Yeni Şifre</label>
@@ -882,17 +875,12 @@ document.addEventListener('DOMContentLoaded', () => {
           cancelButtonColor: '#475569',
           focusConfirm: false,
           preConfirm: () => {
-            const username = document.getElementById('swal-recovery-user').value.trim();
-            const recoveryKey = document.getElementById('swal-recovery-key').value.trim();
+            const recoveryCode = document.getElementById('swal-recovery-code').value.trim();
             const newPassword = document.getElementById('swal-recovery-newpass').value;
             const confirmPass = document.getElementById('swal-recovery-confirmpass').value;
 
-            if (!username) {
-              Swal.showValidationMessage('Lütfen kullanıcı adını giriniz.');
-              return false;
-            }
-            if (!recoveryKey) {
-              Swal.showValidationMessage('Lütfen Kurtarma Şifresini (Master Key) giriniz.');
+            if (!recoveryCode) {
+              Swal.showValidationMessage('Lütfen kurtarma kodunu giriniz.');
               return false;
             }
             if (!newPassword || newPassword.length < 5) {
@@ -904,7 +892,7 @@ document.addEventListener('DOMContentLoaded', () => {
               return false;
             }
 
-            return { username, recoveryKey, newPassword };
+            return { recoveryCode, newPassword };
           }
         });
 
@@ -913,7 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
           Swal.fire({
             title: 'Sıfırlanıyor...',
-            text: 'Kurtarma anahtarı doğrulanıyor.',
+            text: 'Kurtarma kodu kontrol ediliyor.',
             background: '#1e293b',
             color: '#f8fafc',
             allowOutsideClick: false,
@@ -922,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
 
-          const response = await fetch('/api/auth/reset-password-recovery', {
+          const response = await fetch('/api/auth/recover-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formValues)
@@ -940,16 +928,14 @@ document.addEventListener('DOMContentLoaded', () => {
               confirmButtonColor: '#4f46e5'
             });
 
-            // Giriş formunu otomatik doldur
-            const userInput = document.getElementById('adminUsername');
+            // Giriş formundaki şifre alanını otomatik doldur
             const passInput = document.getElementById('adminPassword');
-            if (userInput) userInput.value = formValues.username;
             if (passInput) passInput.value = formValues.newPassword;
           } else {
             Swal.fire({
               icon: 'error',
               title: 'Sıfırlama Başarısız',
-              text: resData.message || 'Kurtarma şifresi veya kullanıcı adı hatalı.',
+              text: resData.message || 'Kurtarma kodu hatalı.',
               background: '#1e293b',
               color: '#f8fafc',
               confirmButtonColor: '#4f46e5'
