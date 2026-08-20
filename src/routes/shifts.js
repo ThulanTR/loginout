@@ -15,12 +15,35 @@ function getServerDateTime(date = new Date()) {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
+// Güvenli Tarih Ayrıştırıcı (Backend için format uyumluluğu)
+function parseServerDate(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+  const str = String(dateInput).trim();
+  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if (match) {
+    const [, y, m, d, h, min, s] = match;
+    const dObj = new Date(
+      parseInt(y, 10),
+      parseInt(m, 10) - 1,
+      parseInt(d, 10),
+      parseInt(h, 10),
+      parseInt(min, 10),
+      parseInt(s || '0', 10)
+    );
+    if (!isNaN(dObj.getTime())) return dObj;
+  }
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 // Süre hesaplama fonksiyonu (dakika cinsinden)
 function calculateDurationMinutes(entryTime, exitTime) {
   if (!entryTime || !exitTime) return 0;
-  const start = new Date(entryTime);
-  const end = new Date(exitTime);
-  const diffMs = end - start;
+  const start = parseServerDate(entryTime);
+  const end = parseServerDate(exitTime);
+  if (!start || !end) return 0;
+  const diffMs = end.getTime() - start.getTime();
   if (diffMs <= 0) return 0;
   return Math.round(diffMs / (1000 * 60));
 }

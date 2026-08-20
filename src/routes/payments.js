@@ -86,7 +86,7 @@ router.post('/', authenticateToken, (req, res) => {
   if (!payment_date || amount === undefined || amount === null || !recipient || !category) {
     return res.status(400).json({
       success: false,
-      message: 'Tarih, tutar, alıcı ve kategori alanları zorunludur.'
+      message: 'Tarih, tutar, ödeme yapan ve kategori alanları zorunludur.'
     });
   }
 

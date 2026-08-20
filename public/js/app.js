@@ -17,6 +17,43 @@ function padZero(num) {
   return String(num).padStart(2, '0');
 }
 
+// Güvenli Tarih Çözümleyici (Tarayıcı, Mobil, Format ve Zaman Dilimi Farklılıklarını Önler)
+function parseDateSafely(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+  if (typeof dateInput === 'number') {
+    const d = new Date(dateInput);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const str = String(dateInput).trim();
+
+  // 1. "YYYY-MM-DD[T ]HH:mm(:ss)?" formatını yerel bileşenlerle ayrıştır (Zaman dilimi kaymasını önler)
+  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if (match) {
+    const [, y, m, d, h, min, s] = match;
+    const localDate = new Date(
+      parseInt(y, 10),
+      parseInt(m, 10) - 1,
+      parseInt(d, 10),
+      parseInt(h, 10),
+      parseInt(min, 10),
+      parseInt(s || '0', 10)
+    );
+    if (!isNaN(localDate.getTime())) {
+      return localDate;
+    }
+  }
+
+  // 2. Standart ISO veya Fallback
+  let fallback = new Date(str);
+  if (isNaN(fallback.getTime()) && str.includes(' ')) {
+    fallback = new Date(str.replace(' ', 'T'));
+  }
+
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 // Canlı Saat Güncelleme (Üst Menü)
 function startLiveClock() {
   const clockEl = document.getElementById('liveClockText');
@@ -45,9 +82,19 @@ function startLiveClock() {
 // ==========================================
 function updateStopwatch(entryTimeISO) {
   const display = document.getElementById('stopwatchDisplay');
-  if (!display || !entryTimeISO) return;
+  if (!display) return;
+  if (!entryTimeISO) {
+    display.textContent = '00:00:00';
+    return;
+  }
 
-  const startTime = new Date(entryTimeISO).getTime();
+  const startDate = parseDateSafely(entryTimeISO);
+  if (!startDate) {
+    display.textContent = '00:00:00';
+    return;
+  }
+
+  const startTime = startDate.getTime();
   const now = Date.now();
   const diffSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
 
@@ -61,7 +108,9 @@ function updateStopwatch(entryTimeISO) {
 function startStopwatch(entryTimeISO) {
   if (stopwatchInterval) {
     clearInterval(stopwatchInterval);
+    stopwatchInterval = null;
   }
+  // İlk çalıştırmada 1 saniye beklemeden anında ekrana yansıt
   updateStopwatch(entryTimeISO);
   stopwatchInterval = setInterval(() => {
     updateStopwatch(entryTimeISO);
@@ -137,16 +186,18 @@ function setInitialState() {
 
 // Durum 2: Aktif Vardiya Durumu (Giriş Yapıldı, Kronometre Çalışıyor)
 function setActiveShiftState(shift) {
+  if (!shift || !shift.entry_time) return;
+
   const employeeInput = document.getElementById('employeeName');
   if (employeeInput) {
-    employeeInput.value = shift.employee_name;
+    employeeInput.value = shift.employee_name || '';
     employeeInput.readOnly = true;
     employeeInput.classList.add('bg-slate-800/80', 'cursor-not-allowed', 'border-emerald-500/40');
   }
 
   const workplaceInput = document.getElementById('workplace');
   if (workplaceInput) {
-    workplaceInput.value = shift.workplace;
+    workplaceInput.value = shift.workplace || '';
     workplaceInput.readOnly = true;
     workplaceInput.classList.add('bg-slate-800/80', 'cursor-not-allowed', 'border-emerald-500/40');
   }
@@ -165,7 +216,7 @@ function setActiveShiftState(shift) {
 
   const entryDisplay = document.getElementById('activeEntryTimeDisplay');
   if (entryDisplay) {
-    const entryDate = new Date(shift.entry_time);
+    const entryDate = parseDateSafely(shift.entry_time) || new Date();
     entryDisplay.textContent = entryDate.toLocaleString('tr-TR', {
       day: '2-digit',
       month: 'long',
@@ -196,6 +247,7 @@ function setActiveShiftState(shift) {
     statusBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-3';
   }
 
+  // Canlı sayacı başlat
   startStopwatch(shift.entry_time);
   refreshIcons();
 }
@@ -218,7 +270,7 @@ async function checkActiveShiftOnLoad() {
       return;
     }
 
-    // Hemen UI'yi aç ki bekleme olmasın
+    // Hemen UI'yi aç ki sayfa yenilendiğinde bekleme olmadan sayaç aksın
     setActiveShiftState(savedShift);
 
     // Sunucudan aktifliğini doğrula
@@ -418,6 +470,7 @@ async function handleStartShift() {
         : `<div class="text-amber-400 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5 inline"></i> <span>Konum alınamadı, giriş kaydınız konumsuz oluşturuldu.</span></div>`;
 
       // Başarı bildirimi
+      const entryTimeFormatted = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleTimeString('tr-TR');
       Swal.fire({
         icon: 'success',
         title: 'Vardiya Başlatıldı!',
@@ -425,7 +478,7 @@ async function handleStartShift() {
           <p class="text-sm text-slate-300 mb-2">Hoş geldiniz, <strong>${result.shift.employee_name}</strong>!</p>
           <div class="p-3 bg-slate-800/80 rounded-xl text-xs text-slate-300 text-left space-y-2 border border-slate-700">
             <div><strong class="text-indigo-300">Yer:</strong> ${result.shift.workplace}</div>
-            <div><strong class="text-emerald-400">Giriş Saati:</strong> ${new Date(result.shift.entry_time).toLocaleTimeString('tr-TR')}</div>
+            <div><strong class="text-emerald-400">Giriş Saati:</strong> ${entryTimeFormatted}</div>
             ${locationNote}
             <div class="text-slate-400 font-medium">Kronometreniz çalışmaya başladı. İyi çalışmalar dileriz.</div>
           </div>
@@ -488,6 +541,7 @@ async function handleEndShift() {
 
   // Canlı sayaçtaki güncel süreyi al
   const currentDurationText = document.getElementById('stopwatchDisplay')?.textContent || '00:00:00';
+  const entryTimeDisplayStr = (parseDateSafely(activeShift.entry_time) || new Date()).toLocaleTimeString('tr-TR');
 
   // SweetAlert2 ile şık onay ve not alma modalı
   const { value: formValues, isConfirmed } = await Swal.fire({
@@ -497,7 +551,7 @@ async function handleEndShift() {
         <p class="text-slate-300"><strong>${activeShift.employee_name}</strong> için vardiya çıkışı yapılacak.</p>
         <div class="p-3 bg-slate-800 rounded-xl space-y-1.5 border border-slate-700 text-xs">
           <div><strong class="text-slate-400">Çalışma Yeri:</strong> ${activeShift.workplace}</div>
-          <div><strong class="text-slate-400">Giriş Saati:</strong> ${new Date(activeShift.entry_time).toLocaleTimeString('tr-TR')}</div>
+          <div><strong class="text-slate-400">Giriş Saati:</strong> ${entryTimeDisplayStr}</div>
           <div><strong class="text-emerald-400">Geçen Süre:</strong> <span class="font-mono font-bold text-emerald-300">${currentDurationText}</span></div>
         </div>
         <div>
@@ -553,6 +607,8 @@ async function handleEndShift() {
       setInitialState();
 
       // Şık Başarı Özeti Modalı
+      const entryTimeLocale = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleString('tr-TR');
+      const exitTimeLocale = (parseDateSafely(result.shift.exit_time) || new Date()).toLocaleString('tr-TR');
       Swal.fire({
         icon: 'success',
         title: 'Çıkış Başarıyla Tamamlandı!',
@@ -565,11 +621,11 @@ async function handleEndShift() {
             </div>
             <div class="flex justify-between">
               <span class="text-slate-400">Giriş Saati:</span>
-              <span>${new Date(result.shift.entry_time).toLocaleString('tr-TR')}</span>
+              <span>${entryTimeLocale}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-slate-400">Çıkış Saati:</span>
-              <span>${new Date(result.shift.exit_time).toLocaleString('tr-TR')}</span>
+              <span>${exitTimeLocale}</span>
             </div>
             <div class="pt-2 border-t border-slate-700 flex justify-between items-center">
               <span class="text-slate-300 font-semibold">Toplam Çalışma Süresi:</span>

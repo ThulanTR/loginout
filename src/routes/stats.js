@@ -131,7 +131,7 @@ router.get('/dashboard', authenticateToken, (req, res) => {
         type: 'payment',
         id: p.id,
         title: `${formatCurrency(p.amount)} ödeme yapıldı`,
-        description: `Alıcı: ${p.recipient} (${p.category} - ${p.payment_method})`,
+        description: `Ödeme Yapan: ${p.recipient} (${p.category} - ${p.payment_method})`,
         rawDate: p.created_at || p.payment_date,
         timeAgo: timeAgo(p.created_at || p.payment_date),
         badgeColor: 'emerald',

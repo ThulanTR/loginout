@@ -43,10 +43,42 @@ function formatMoney(amount) {
   return `CAD$ ${formatted}`;
 }
 
+// Güvenli Tarih Çözümleyici (Tarayıcı, Mobil ve Format Farklılıklarını Önler)
+function parseDateSafely(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+  if (typeof dateInput === 'number') {
+    const d = new Date(dateInput);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const str = String(dateInput).trim();
+  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+  if (match) {
+    const [, y, m, d, h, min, s] = match;
+    const localDate = new Date(
+      parseInt(y, 10),
+      parseInt(m, 10) - 1,
+      parseInt(d, 10),
+      parseInt(h, 10),
+      parseInt(min, 10),
+      parseInt(s || '0', 10)
+    );
+    if (!isNaN(localDate.getTime())) return localDate;
+  }
+
+  let fallback = new Date(str);
+  if (isNaN(fallback.getTime()) && str.includes(' ')) {
+    fallback = new Date(str.replace(' ', 'T'));
+  }
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 // Tarih Formatlayıcı
 function formatDate(dateStr) {
   if (!dateStr) return '-';
-  const d = new Date(dateStr);
+  const d = parseDateSafely(dateStr);
+  if (!d) return '-';
   return d.toLocaleDateString('tr-TR', {
     day: '2-digit',
     month: '2-digit',
@@ -56,7 +88,8 @@ function formatDate(dateStr) {
 
 function formatDateTime(dateStr) {
   if (!dateStr) return '-';
-  const d = new Date(dateStr);
+  const d = parseDateSafely(dateStr);
+  if (!d) return '-';
   return d.toLocaleString('tr-TR', {
     day: '2-digit',
     month: '2-digit',
@@ -68,7 +101,8 @@ function formatDateTime(dateStr) {
 
 function formatTimeOnly(dateStr) {
   if (!dateStr) return '-';
-  const d = new Date(dateStr);
+  const d = parseDateSafely(dateStr);
+  if (!d) return '-';
   return d.toLocaleTimeString('tr-TR', {
     hour: '2-digit',
     minute: '2-digit'
@@ -646,7 +680,7 @@ function renderPaymentsTable(payments) {
           ${formatDate(pay.payment_date)}
         </td>
 
-        <!-- Alıcı / Konu -->
+        <!-- Ödeme Yapan -->
         <td class="py-3 px-3 font-semibold text-white whitespace-nowrap">
           ${pay.recipient}
         </td>
@@ -767,7 +801,7 @@ function exportPaymentsToCSV() {
     return;
   }
 
-  const headers = ['ID', 'Ödeme Tarihi', 'Alıcı / Konu', 'Kategori', 'Ödeme Yöntemi', 'Tutar (CAD$)', 'Açıklama'];
+  const headers = ['ID', 'Ödeme Tarihi', 'Ödeme Yapan', 'Kategori', 'Ödeme Yöntemi', 'Tutar (CAD$)', 'Açıklama'];
   const rows = currentPaymentsData.map(p => [
     p.id,
     formatDate(p.payment_date),
