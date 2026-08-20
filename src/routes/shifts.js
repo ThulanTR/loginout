@@ -3,49 +3,25 @@ const router = express.Router();
 const { db } = require('../database');
 const { authenticateToken } = require('../auth');
 
-// Sunucu saati ile formatlanmış ISO/Yerel tarih-saat stringi (YYYY-MM-DDTHH:mm:ss)
-function getServerDateTime(date = new Date()) {
-  const pad = (n) => String(n).padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-}
-
-// Güvenli Tarih Ayrıştırıcı (Backend için format uyumluluğu)
-function parseServerDate(dateInput) {
-  if (!dateInput) return null;
-  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
-  const str = String(dateInput).trim();
-  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-  if (match) {
-    const [, y, m, d, h, min, s] = match;
-    const dObj = new Date(
-      parseInt(y, 10),
-      parseInt(m, 10) - 1,
-      parseInt(d, 10),
-      parseInt(h, 10),
-      parseInt(min, 10),
-      parseInt(s || '0', 10)
-    );
-    if (!isNaN(dObj.getTime())) return dObj;
-  }
-  const fallback = new Date(str);
-  return isNaN(fallback.getTime()) ? null : fallback;
-}
-
-// Süre hesaplama fonksiyonu (dakika cinsinden)
+// Süre hesaplama fonksiyonu (dakika cinsinden, UTC ISO ve tüm formatları destekler)
 function calculateDurationMinutes(entryTime, exitTime) {
   if (!entryTime || !exitTime) return 0;
-  const start = parseServerDate(entryTime);
-  const end = parseServerDate(exitTime);
-  if (!start || !end) return 0;
-  const diffMs = end.getTime() - start.getTime();
+  const start = new Date(entryTime).getTime();
+  const end = new Date(exitTime).getTime();
+  if (isNaN(start) || isNaN(end)) return 0;
+  const diffMs = end - start;
   if (diffMs <= 0) return 0;
   return Math.round(diffMs / (1000 * 60));
+}
+
+// Tarih stringini standart UTC ISO formatına dönüştürme yardımcısı
+function normalizeToISO(dateInput) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput.toISOString();
+  const str = String(dateInput).trim();
+  if (str.endsWith('Z')) return str;
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? str : parsed.toISOString();
 }
 
 // Süreyi okunabilir metne dönüştürme (Örn: "8 sa 30 dk")
@@ -126,15 +102,15 @@ router.post('/start', (req, res) => {
       });
     }
 
-    // Sunucu saati ile entry_time oluştur
-    const entry_time = getServerDateTime();
+    // Sunucu saati ile UTC ISO formatında entry_time oluştur
+    const entry_time = new Date().toISOString();
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, NULL, 0, 'active', NULL, ?, ?, datetime('now', 'localtime'))
+      VALUES (?, ?, ?, NULL, 0, 'active', NULL, ?, ?, ?)
     `);
 
-    const result = stmt.run(cleanName, cleanPlace, entry_time, latVal, lngVal);
+    const result = stmt.run(cleanName, cleanPlace, entry_time, latVal, lngVal, entry_time);
     const shiftId = result.lastInsertRowid;
 
     res.status(201).json({
@@ -188,8 +164,8 @@ router.put('/:id/end', (req, res) => {
       });
     }
 
-    // Sunucu saati ile exit_time oluştur
-    const exit_time = getServerDateTime();
+    // Sunucu saati ile UTC ISO formatında exit_time oluştur
+    const exit_time = new Date().toISOString();
     const durationMinutes = calculateDurationMinutes(shift.entry_time, exit_time);
     const finalNotes = (notes !== undefined && notes !== null && notes.trim() !== '') ? notes.trim() : (shift.notes || null);
 
@@ -291,27 +267,28 @@ router.post('/', (req, res) => {
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
   try {
-    let durationMinutes = 0;
-    const status = exit_time ? 'completed' : 'active';
-    if (exit_time) {
-      durationMinutes = calculateDurationMinutes(entry_time, exit_time);
-    }
+    const normEntry = normalizeToISO(entry_time);
+    const normExit = exit_time ? normalizeToISO(exit_time) : null;
+    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
+    const status = normExit ? 'completed' : 'active';
+    const nowIso = new Date().toISOString();
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      entry_time,
-      exit_time || null,
+      normEntry,
+      normExit,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal
+      lngVal,
+      nowIso
     );
 
     res.status(201).json({
@@ -417,24 +394,28 @@ router.post('/admin', authenticateToken, (req, res) => {
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
   try {
-    const durationMinutes = exit_time ? calculateDurationMinutes(entry_time, exit_time) : 0;
-    const status = exit_time ? 'completed' : 'active';
+    const normEntry = normalizeToISO(entry_time);
+    const normExit = exit_time ? normalizeToISO(exit_time) : null;
+    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
+    const status = normExit ? 'completed' : 'active';
+    const nowIso = new Date().toISOString();
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      entry_time,
-      exit_time || null,
+      normEntry,
+      normExit,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal
+      lngVal,
+      nowIso
     );
 
     res.status(201).json({
@@ -461,8 +442,10 @@ router.put('/:id', authenticateToken, (req, res) => {
   }
 
   try {
-    const durationMinutes = exit_time ? calculateDurationMinutes(entry_time, exit_time) : 0;
-    const status = exit_time ? 'completed' : 'active';
+    const normEntry = normalizeToISO(entry_time);
+    const normExit = exit_time ? normalizeToISO(exit_time) : null;
+    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
+    const status = normExit ? 'completed' : 'active';
 
     // Mevcut kaydı çek ki konum üzerine yazılmasın (eğer gönderilmemişse)
     const existing = db.prepare('SELECT entry_latitude, entry_longitude FROM shifts WHERE id = ?').get(id);
@@ -478,8 +461,8 @@ router.put('/:id', authenticateToken, (req, res) => {
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      entry_time,
-      exit_time || null,
+      normEntry,
+      normExit,
       durationMinutes,
       status,
       notes ? notes.trim() : null,

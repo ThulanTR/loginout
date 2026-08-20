@@ -43,7 +43,7 @@ function formatMoney(amount) {
   return `CAD$ ${formatted}`;
 }
 
-// Güvenli Tarih Çözümleyici (Tarayıcı, Mobil ve Format Farklılıklarını Önler)
+// Güvenli Tarih Çözümleyici (UTC ISO formatı, Tarayıcı ve Saat Dilimi Uyumluluğu)
 function parseDateSafely(dateInput) {
   if (!dateInput) return null;
   if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
@@ -53,25 +53,25 @@ function parseDateSafely(dateInput) {
   }
 
   const str = String(dateInput).trim();
-  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-  if (match) {
-    const [, y, m, d, h, min, s] = match;
-    const localDate = new Date(
-      parseInt(y, 10),
-      parseInt(m, 10) - 1,
-      parseInt(d, 10),
-      parseInt(h, 10),
-      parseInt(min, 10),
-      parseInt(s || '0', 10)
-    );
-    if (!isNaN(localDate.getTime())) return localDate;
+
+  // 1. Z ile biten veya timezone offset içeren standart UTC/ISO string'leri
+  if (str.endsWith('Z') || str.includes('+') || (str.includes('-') && str.lastIndexOf('-') > 7)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
   }
 
-  let fallback = new Date(str);
-  if (isNaN(fallback.getTime()) && str.includes(' ')) {
-    fallback = new Date(str.replace(' ', 'T'));
+  // 2. Eğer saat dilimsiz ISO formatıysa (örn: 2026-08-20T16:46:00 veya boşluklu), UTC son eki ile dene
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) {
+    const isoWithZ = str.replace(' ', 'T') + 'Z';
+    const dUtc = new Date(isoWithZ);
+    if (!isNaN(dUtc.getTime())) return dUtc;
   }
-  return isNaN(fallback.getTime()) ? null : fallback;
+
+  // 3. Standart Date constructor
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+
+  return null;
 }
 
 // Tarih Formatlayıcı

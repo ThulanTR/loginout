@@ -79,6 +79,19 @@ function initDatabase() {
       db.exec("ALTER TABLE shifts ADD COLUMN entry_longitude REAL");
       console.log('✅ shifts tablosuna entry_longitude kolonu eklendi.');
     }
+
+    // Açık vardiyalarda eski/saat dilimsiz entry_time formatını UTC ISO formatına güncelle
+    const activeLegacyShifts = db.prepare("SELECT id, entry_time FROM shifts WHERE (status = 'active' OR exit_time IS NULL) AND entry_time NOT LIKE '%Z'").all();
+    if (activeLegacyShifts.length > 0) {
+      const updateEntryStmt = db.prepare("UPDATE shifts SET entry_time = ? WHERE id = ?");
+      activeLegacyShifts.forEach(s => {
+        try {
+          const iso = new Date(s.entry_time).toISOString();
+          updateEntryStmt.run(iso, s.id);
+        } catch(e) {}
+      });
+      console.log(`✅ ${activeLegacyShifts.length} adet açık vardiyanın entry_time değeri UTC ISO formatına dönüştürüldü.`);
+    }
   } catch (migErr) {
     console.error('Migrasyon kontrolü hatası:', migErr);
   }

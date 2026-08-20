@@ -17,7 +17,7 @@ function padZero(num) {
   return String(num).padStart(2, '0');
 }
 
-// Güvenli Tarih Çözümleyici (Tarayıcı, Mobil, Format ve Zaman Dilimi Farklılıklarını Önler)
+// Güvenli Tarih Çözümleyici (UTC ISO formatı, Tarayıcı ve Saat Dilimi Uyumluluğu)
 function parseDateSafely(dateInput) {
   if (!dateInput) return null;
   if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
@@ -28,30 +28,24 @@ function parseDateSafely(dateInput) {
 
   const str = String(dateInput).trim();
 
-  // 1. "YYYY-MM-DD[T ]HH:mm(:ss)?" formatını yerel bileşenlerle ayrıştır (Zaman dilimi kaymasını önler)
-  const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-  if (match) {
-    const [, y, m, d, h, min, s] = match;
-    const localDate = new Date(
-      parseInt(y, 10),
-      parseInt(m, 10) - 1,
-      parseInt(d, 10),
-      parseInt(h, 10),
-      parseInt(min, 10),
-      parseInt(s || '0', 10)
-    );
-    if (!isNaN(localDate.getTime())) {
-      return localDate;
-    }
+  // 1. Z ile biten veya timezone offset içeren standart UTC/ISO string'leri (new Date().toISOString())
+  if (str.endsWith('Z') || str.includes('+') || (str.includes('-') && str.lastIndexOf('-') > 7)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
   }
 
-  // 2. Standart ISO veya Fallback
-  let fallback = new Date(str);
-  if (isNaN(fallback.getTime()) && str.includes(' ')) {
-    fallback = new Date(str.replace(' ', 'T'));
+  // 2. Eğer saat dilimsiz ISO formatıysa (örn: 2026-08-20T16:46:00 veya boşluklu), UTC son eki ile dene
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) {
+    const isoWithZ = str.replace(' ', 'T') + 'Z';
+    const dUtc = new Date(isoWithZ);
+    if (!isNaN(dUtc.getTime())) return dUtc;
   }
 
-  return isNaN(fallback.getTime()) ? null : fallback;
+  // 3. Standart Date constructor
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
+
+  return null;
 }
 
 // Canlı Saat Güncelleme (Üst Menü)
@@ -96,7 +90,16 @@ function updateStopwatch(entryTimeISO) {
 
   const startTime = startDate.getTime();
   const now = Date.now();
-  const diffSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
+  const diffMs = now - startTime;
+  const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
+
+  // Railway / Canlı Ortam Kontrolü için Konsol Logu
+  console.log('[Canlı Sayaç]', {
+    entry_time: entryTimeISO,
+    parsed_date: startDate.toISOString(),
+    diff_ms: diffMs,
+    diff_seconds: diffSeconds
+  });
 
   const hours = Math.floor(diffSeconds / 3600);
   const minutes = Math.floor((diffSeconds % 3600) / 60);
