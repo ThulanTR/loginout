@@ -1020,16 +1020,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Şifre Değiştirme Modalı
+  // Şifre ve Kurtarma Anahtarı Modalı
   const changePassModal = document.getElementById('changePassModal');
+  const tabChangePassBtn = document.getElementById('tabChangePassBtn');
+  const tabChangeRecoveryBtn = document.getElementById('tabChangeRecoveryBtn');
+  const changePassForm = document.getElementById('changePassForm');
+  const changeRecoveryForm = document.getElementById('changeRecoveryForm');
+
+  function switchSecurityTab(tab) {
+    if (tab === 'pass') {
+      tabChangePassBtn?.classList.add('text-indigo-400', 'border-indigo-500');
+      tabChangePassBtn?.classList.remove('text-slate-400', 'border-transparent');
+      tabChangeRecoveryBtn?.classList.add('text-slate-400', 'border-transparent');
+      tabChangeRecoveryBtn?.classList.remove('text-indigo-400', 'border-indigo-500');
+      changePassForm?.classList.remove('hidden');
+      changeRecoveryForm?.classList.add('hidden');
+    } else {
+      tabChangeRecoveryBtn?.classList.add('text-indigo-400', 'border-indigo-500');
+      tabChangeRecoveryBtn?.classList.remove('text-slate-400', 'border-transparent');
+      tabChangePassBtn?.classList.add('text-slate-400', 'border-transparent');
+      tabChangePassBtn?.classList.remove('text-indigo-400', 'border-indigo-500');
+      changeRecoveryForm?.classList.remove('hidden');
+      changePassForm?.classList.add('hidden');
+    }
+    refreshIcons();
+  }
+
+  tabChangePassBtn?.addEventListener('click', () => switchSecurityTab('pass'));
+  tabChangeRecoveryBtn?.addEventListener('click', () => switchSecurityTab('recovery'));
+
   document.getElementById('openChangePassBtn')?.addEventListener('click', () => {
+    switchSecurityTab('pass');
     changePassModal?.classList.remove('hidden');
     refreshIcons();
   });
   document.getElementById('closeChangePassModalBtn')?.addEventListener('click', () => changePassModal?.classList.add('hidden'));
   document.getElementById('cancelChangePassBtn')?.addEventListener('click', () => changePassModal?.classList.add('hidden'));
+  document.getElementById('cancelChangeRecoveryBtn')?.addEventListener('click', () => changePassModal?.classList.add('hidden'));
 
-  document.getElementById('changePassForm')?.addEventListener('submit', async (e) => {
+  // 1. Giriş Şifresi Güncelleme
+  changePassForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
@@ -1044,19 +1074,53 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (data.success) {
         changePassModal.classList.add('hidden');
-        document.getElementById('changePassForm').reset();
+        changePassForm.reset();
         Swal.fire({
           icon: 'success',
           title: 'Şifre Güncellendi!',
           text: 'Yeni şifreniz başarıyla kaydedildi.',
           background: '#1e293b',
-          color: '#f8fafc'
+          color: '#f8fafc',
+          confirmButtonColor: '#4f46e5'
         });
       } else {
         Swal.fire({ icon: 'error', title: 'Hata', text: data.message, background: '#1e293b', color: '#f8fafc' });
       }
     } catch (err) {
       console.error('Şifre değiştirme hatası:', err);
+    }
+  });
+
+  // 2. Kurtarma Anahtarı (Master Key) Güncelleme
+  changeRecoveryForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('recoveryCurrentPass').value;
+    const newRecoveryKey = document.getElementById('newRecoveryKey').value;
+
+    try {
+      const res = await fetch('/api/auth/change-recovery-key', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ currentPassword, newRecoveryKey })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        changePassModal.classList.add('hidden');
+        changeRecoveryForm.reset();
+        Swal.fire({
+          icon: 'success',
+          title: 'Kurtarma Anahtarı Güncellendi!',
+          text: 'Yeni kurtarma anahtarınız (Master Key) başarıyla kaydedildi. Lütfen güvenli bir yerde saklayınız.',
+          background: '#1e293b',
+          color: '#f8fafc',
+          confirmButtonColor: '#4f46e5'
+        });
+      } else {
+        Swal.fire({ icon: 'error', title: 'Hata', text: data.message, background: '#1e293b', color: '#f8fafc' });
+      }
+    } catch (err) {
+      console.error('Kurtarma anahtarı güncelleme hatası:', err);
     }
   });
 });

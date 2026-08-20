@@ -663,16 +663,27 @@
     </div>
   </div>
 
-  <!-- 2. Yönetici Şifre Değiştir Modalı -->
+  <!-- 2. Yönetici Şifre ve Kurtarma Anahtarı Modalı -->
   <div id="changePassModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden px-4">
     <div class="glass-card w-full max-w-md rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
       <button id="closeChangePassModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <h3 class="text-lg font-bold font-heading text-white mb-1">Yönetici Şifresini Değiştir</h3>
-      <p class="text-xs text-slate-400 mb-4">Mevcut şifrenizi doğrulayarak yeni şifre belirleyin.</p>
+      <h3 class="text-lg font-bold font-heading text-white mb-1">Yönetici Güvenlik Ayarları</h3>
+      <p class="text-xs text-slate-400 mb-4">Giriş şifrenizi veya hesap kurtarma anahtarınızı güncelleyin.</p>
 
+      <!-- Sekmeler -->
+      <div class="flex border-b border-slate-800 mb-4">
+        <button type="button" id="tabChangePassBtn" class="flex-1 pb-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500 transition">
+          Giriş Şifresi
+        </button>
+        <button type="button" id="tabChangeRecoveryBtn" class="flex-1 pb-2 text-xs font-semibold text-slate-400 border-b-2 border-transparent hover:text-slate-200 transition">
+          Kurtarma Anahtarı (Master Key)
+        </button>
+      </div>
+
+      <!-- Tab 1: Şifre Değiştir Formu -->
       <form id="changePassForm" class="space-y-4">
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Mevcut Şifre</label>
@@ -687,6 +698,29 @@
         <div class="pt-2 flex justify-end gap-2">
           <button type="button" id="cancelChangePassBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
           <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold">Şifreyi Güncelle</button>
+        </div>
+      </form>
+
+      <!-- Tab 2: Kurtarma Anahtarı Değiştir Formu -->
+      <form id="changeRecoveryForm" class="space-y-4 hidden">
+        <div class="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-[11px] text-indigo-300 flex items-start gap-2">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-indigo-400 shrink-0 mt-0.5"></i>
+          <span>Kurtarma anahtarı, şifrenizi unuttuğunuzda hesabınızı geri alabilmenizi sağlar. Güvenli bir yerde saklayınız.</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Mevcut Giriş Şifreniz</label>
+          <input type="password" id="recoveryCurrentPass" required class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm" placeholder="Güvenlik doğrulaması için">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Yeni Kurtarma Şifresi (Master Key)</label>
+          <input type="password" id="newRecoveryKey" required minlength="5" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm" placeholder="En az 5 karakter">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" id="cancelChangeRecoveryBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">Kurtarma Anahtarını Güncelle</button>
         </div>
       </form>
     </div>

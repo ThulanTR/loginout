@@ -54,6 +54,7 @@ function initDatabase() {
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       full_name TEXT NOT NULL,
+      recovery_key_hash TEXT,
       created_at TEXT DEFAULT (datetime('now', 'localtime'))
     );
   `);
@@ -92,6 +93,18 @@ function initDatabase() {
       });
       console.log(`✅ ${activeLegacyShifts.length} adet açık vardiyanın entry_time değeri UTC ISO formatına dönüştürüldü.`);
     }
+
+    // Yönetici tablosunda recovery_key_hash kolonu kontrolü
+    const adminCols = db.prepare("PRAGMA table_info(admins)").all();
+    const hasRecoveryKey = adminCols.some(c => c.name === 'recovery_key_hash');
+    if (!hasRecoveryKey) {
+      db.exec("ALTER TABLE admins ADD COLUMN recovery_key_hash TEXT");
+      console.log('✅ admins tablosuna recovery_key_hash kolonu eklendi.');
+    }
+
+    // Kurtarma anahtarı olmayan mevcut yöneticilere varsayılan kurtarma anahtarı ata
+    const defaultRecoveryHash = bcrypt.hashSync('admin-kurtarma-2026', 10);
+    db.prepare("UPDATE admins SET recovery_key_hash = ? WHERE recovery_key_hash IS NULL OR recovery_key_hash = ''").run(defaultRecoveryHash);
   } catch (migErr) {
     console.error('Migrasyon kontrolü hatası:', migErr);
   }
@@ -108,12 +121,13 @@ function seedDataIfEmpty() {
   if (adminCount === 0) {
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync('admin123', salt);
+    const recoveryHash = bcrypt.hashSync('admin-kurtarma-2026', salt);
     const insertAdmin = db.prepare(`
-      INSERT INTO admins (username, password_hash, full_name)
-      VALUES (?, ?, ?)
+      INSERT INTO admins (username, password_hash, full_name, recovery_key_hash)
+      VALUES (?, ?, ?, ?)
     `);
-    insertAdmin.run('admin', hash, 'Sistem Yöneticisi');
-    console.log('✅ Varsayılan yönetici oluşturuldu (Kullanıcı: admin, Şifre: admin123)');
+    insertAdmin.run('admin', hash, 'Sistem Yöneticisi', recoveryHash);
+    console.log('✅ Varsayılan yönetici oluşturuldu (Kullanıcı: admin, Şifre: admin123, Kurtarma: admin-kurtarma-2026)');
   }
 
   // Örnek Vardiya Verileri kontrolü

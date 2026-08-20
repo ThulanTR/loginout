@@ -14,11 +14,14 @@
 - **Akıllı Tamamlama:** Daha önce girilen çalışan ve şantiye isimlerini otomatik önerir.
 - **Şık Bildirimler:** SweetAlert2 ile modern onay kutuları ve anlık durum rozetleri.
 
-### 2. 🔒 Güvenli Yönetici Girişi
+### 2. 🔒 Güvenli Yönetici Girişi ve Şifre Kurtarma
 - **Varsayılan Kullanıcı Adı:** `admin`
 - **Varsayılan Şifre:** `admin123`
+- **Varsayılan Kurtarma Anahtarı (Master Key):** `admin-kurtarma-2026`
 - JWT tabanlı güvenli oturum yönetimi.
-- Yönetici panelinden kolay şifre değiştirme yeteneği.
+- **Şifremi Unuttum (Arayüzden Kurtarma):** Giriş ekranındaki "Şifremi Unuttum?" linkine tıklayıp Kurtarma Anahtarı (Master Key) ile anında yeni şifre belirleyebilirsiniz.
+- **Acil Durum CLI Script'i:** Terminalden `node reset-password.js YeniSifre123` çalıştırarak şifrenizi doğrudan sıfırlayabilirsiniz.
+- Yönetici panelinden hem giriş şifresini hem de kurtarma anahtarını kolayca güncelleyebilirsiniz.
 
 ### 3. 📊 Yönetici Kontrol Paneli (`/admin`)
 - **Bölüm A: Özet ve Dashboard Metrikleri:**
