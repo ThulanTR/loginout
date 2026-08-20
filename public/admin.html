@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yönetici Kontrol Paneli - Personel Takip & Finans</title>
+  <meta name="description" content="Personel mesai saatleri ve finansal ödeme yönetim paneli">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Dekoratif Işıklar -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0 no-print">
+    <div class="absolute -top-40 right-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 left-10 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Üst Başlık (Admin Header) -->
+  <header class="relative z-20 sticky top-0 backdrop-blur-xl bg-slate-900/90 border-b border-slate-800 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Sol: Başlık ve Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="shield" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold font-heading text-white">Yönetici Paneli</h1>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-semibold border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Çevrimiçi
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Personel Takip & Finans Yönetim Sistemi</p>
+        </div>
+      </div>
+
+      <!-- Sağ: Hızlı Butonlar, Yönetici Profili ve Çıkış -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <a href="/" target="_blank" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Yeni sekmede çalışan bildirim formunu aç">
+          <i data-lucide="external-link" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Çalışan Portali</span>
+        </a>
+
+        <button id="openChangePassBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Şifre Değiştir">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="hidden md:inline">Şifre Değiştir</span>
+        </button>
+
+        <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
+
+        <div class="flex items-center gap-2 pl-1">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-xs font-bold text-indigo-300">
+            AD
+          </div>
+          <span id="adminDisplayName" class="text-xs font-medium text-slate-200 hidden lg:inline">Sistem Yöneticisi</span>
+        </div>
+
+        <button id="logoutBtn" class="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1.5">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Çıkış</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sekme Navigasyonu (Tabs) -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-2 border-t border-slate-800/80 overflow-x-auto py-2">
+      
+      <button data-tab="dashboard" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Genel Bakış & Özet</span>
+      </button>
+
+      <button data-tab="shifts" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-transparent">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Personel Giriş-Çıkış Kayıtları</span>
+        <span id="tabShiftsBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-slate-200 font-mono">0</span>
+      </button>
+
+      <button data-tab="finance" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-transparent">
+        <i data-lucide="wallet" class="w-4 h-4"></i>
+        <span>Finans & Ödeme Yönetimi</span>
+        <span id="tabFinanceBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-slate-200 font-mono">CAD$</span>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- Ana İçerik Gövdesi -->
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- BÖLÜM A: ÖZET VE DASHBOARD METRİKLERİ      -->
+    <!-- ========================================== -->
+    <section id="tabContent-dashboard" class="tab-pane space-y-6">
+      
+      <!-- 4 Ana Metrik Kartı -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        
+        <!-- Kart 1: Toplam Giriş-Çıkış Kaydı -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-slate-400">Toplam Vardiya Kaydı</span>
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <i data-lucide="clipboard-list" class="w-5 h-5 text-blue-400"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <h3 id="statTotalShifts" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0</h3>
+            <span class="text-xs text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-500/20 flex items-center gap-1">
+              <i data-lucide="check" class="w-3 h-3"></i> Aktif Veri
+            </span>
+          </div>
+        </div>
+
+        <!-- Kart 2: Bugün Çalışan Personel -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-slate-400">Bugün Çalışan Personel</span>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <h3 id="statTodayActive" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0</h3>
+            <span class="text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
+              <i data-lucide="activity" class="w-3 h-3"></i> Bugün
+            </span>
+          </div>
+        </div>
+
+        <!-- Kart 3: Toplam Alınan Ödeme -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-slate-400">Toplam Alınan Ödeme</span>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <i data-lucide="banknote" class="w-5 h-5 text-amber-400"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <h3 id="statTotalPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-amber-300">CAD$ 0.00</h3>
+            <span class="text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/20">Genel Kasa</span>
+          </div>
+        </div>
+
+        <!-- Kart 4: Bu Ayki Kazanç -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-slate-400">Bu Ayki Kazanç</span>
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+              <i data-lucide="calendar" class="w-5 h-5 text-purple-400"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <h3 id="statThisMonthPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-purple-300">CAD$ 0.00</h3>
+            <span class="text-xs text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-500/20">Bu Ay</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Grafikler ve Hızlı İşlemler Satırı -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sol: Haftalık Çalışma Süreleri Çubuk Grafiği (Chart.js) -->
+        <div class="lg:col-span-2 glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-400"></i>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Son 7 Günlük Çalışma Saati Dağılımı</h4>
+            </div>
+            <span class="text-xs text-slate-400">Saat Bazında</span>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="weeklyHoursChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Sağ: Finans Kategori Dağılım Grafiği (Doughnut) -->
+        <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-5 h-5 text-purple-400"></i>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Gider / Kategori Dağılımı</h4>
+            </div>
+            <span class="text-xs text-slate-400">CAD$ Tutarları</span>
+          </div>
+          <div class="relative h-64 w-full flex items-center justify-center">
+            <canvas id="categoryDistributionChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Hızlı Zaman Çizelgesi (Timeline) ve Hızlı İşlem Kartları -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sol: Son Hareketler Zaman Çizelgesi -->
+        <div class="lg:col-span-2 glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Son Hareketler Zaman Çizelgesi (Timeline)</h4>
+            </div>
+            <button id="refreshDashboardBtn" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Yenile
+            </button>
+          </div>
+
+          <!-- Zaman Çizelgesi Akış Listesi -->
+          <div id="timelineContainer" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            <div class="text-xs text-slate-400 text-center py-6">Hareketler yükleniyor...</div>
+          </div>
+        </div>
+
+        <!-- Sağ: Hızlı Eylemler & Kolay Yönlendirme -->
+        <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-slate-800 flex flex-col justify-between space-y-4">
+          <div>
+            <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base mb-3 flex items-center gap-2">
+              <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
+              <span>Hızlı İşlemler</span>
+            </h4>
+            <p class="text-xs text-slate-400 leading-relaxed mb-4">
+              Sık kullanılan işlemleri doğrudan buradan tek tıkla başlatabilirsiniz.
+            </p>
+
+            <div class="space-y-2.5">
+              <button id="quickAddPaymentBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                  <span>Yeni Ödeme Kaydı Ekle</span>
+                </span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+              </button>
+
+              <button id="quickAddShiftBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
+                  <span>Manuel Giriş-Çıkış Gir</span>
+                </span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+              </button>
+
+              <button id="quickExportShiftsBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4 text-purple-400"></i>
+                  <span>Vardiya Excel (CSV) Raporu Al</span>
+                </span>
+                <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-xs text-indigo-200 space-y-1">
+            <div class="font-bold flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>İpucu</span>
+            </div>
+            <p class="text-[11px] text-indigo-300">
+              Kayıtları çalışan adına veya tarih aralığına göre filtreleyebilir ve anında PDF/Yazdır çıktısı alabilirsiniz.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- BÖLÜM B: PERSONEL GİRİŞ-ÇIKIŞ TABLOSU       -->
+    <!-- ========================================== -->
+    <section id="tabContent-shifts" class="tab-pane hidden space-y-6">
+      
+      <!-- Filtreleme ve Arama Araç Çubuğu -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-4">
+        
+        <!-- Üst Satır: Arama ve Butonlar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="filter" class="w-5 h-5 text-indigo-400"></i>
+            <h3 class="font-heading font-bold text-slate-200 text-base">Vardiya Kayıtları Filtreleme</h3>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="addManualShiftBtn" class="px-3.5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold flex items-center gap-1.5 shadow">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>+ Manuel Kayıt Ekle</span>
+            </button>
+            <button id="exportShiftsCsvBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Excel (CSV)</span>
+            </button>
+            <button id="printShiftsBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+              <i data-lucide="printer" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span>Yazdır</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtre Giriş Alanları -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+          <!-- İsim / Not Arama -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Personel / Not Ara</label>
+            <div class="relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5"></i>
+              <input type="text" id="shiftSearchInput" placeholder="İsim veya not..." class="w-full pl-8 pr-3 py-1.5 rounded-lg custom-input text-xs">
+            </div>
+          </div>
+
+          <!-- Şantiye / Bölüm Seçimi -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Çalışma Yeri / Şantiye</label>
+            <select id="shiftWorkplaceFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+              <option value="">Tümü (Tüm Şantiyeler)</option>
+            </select>
+          </div>
+
+          <!-- Başlangıç Tarihi -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Başlangıç Tarihi</label>
+            <input type="date" id="shiftStartDate" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+          </div>
+
+          <!-- Bitiş Tarihi ve Filtre Temizle -->
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Bitiş Tarihi</label>
+            <div class="flex gap-2">
+              <input type="date" id="shiftEndDate" class="flex-1 px-3 py-1.5 rounded-lg custom-input text-xs">
+              <button id="resetShiftFiltersBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs border border-slate-700" title="Filtreleri Sıfırla">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Filtre Özet Bilgi Şeridi -->
+      <div class="flex items-center justify-between px-2 text-xs text-slate-400">
+        <div>
+          Listelenen Kayıt: <strong id="shiftCountText" class="text-white">0</strong> | 
+          Toplam Çalışma: <strong id="shiftTotalHoursText" class="text-emerald-400">0 Saat</strong>
+        </div>
+        <div class="text-[11px] text-slate-500">Tarihe göre yeniden eskiye sıralı</div>
+      </div>
+
+      <!-- Giriş-Çıkış Kayıtları Tablosu -->
+      <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 text-[11px] uppercase tracking-wider">
+              <tr>
+                <th class="py-3.5 px-4">Tarih</th>
+                <th class="py-3.5 px-4">Çalışan Adı Soyadı</th>
+                <th class="py-3.5 px-4">Çalışma Yeri / Şantiye</th>
+                <th class="py-3.5 px-4">Konum</th>
+                <th class="py-3.5 px-4">Giriş Saati</th>
+                <th class="py-3.5 px-4">Çıkış Saati</th>
+                <th class="py-3.5 px-4">Toplam Süre</th>
+                <th class="py-3.5 px-4">Notlar</th>
+                <th class="py-3.5 px-4 text-right no-print">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="shiftsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="9" class="text-center py-8 text-slate-400">Kayıtlar yükleniyor...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- BÖLÜM C: FİNANS / ÖDEME YÖNETİMİ           -->
+    <!-- ========================================== -->
+    <section id="tabContent-finance" class="tab-pane hidden space-y-6">
+      
+      <!-- Finansal Özet Kartları -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
+          <div class="text-xs font-medium text-slate-400 mb-1">Toplam Alınan Ödeme</div>
+          <div id="financeSummaryTotal" class="text-2xl font-bold font-heading text-white">CAD$ 0.00</div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
+          <div class="text-xs font-medium text-slate-400 mb-1">Bu Ayki Kazanç</div>
+          <div id="financeSummaryThisMonth" class="text-2xl font-bold font-heading text-emerald-400">CAD$ 0.00</div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
+          <div class="text-xs font-medium text-slate-400 mb-1">Toplam Ödeme Sayısı</div>
+          <div id="financeSummaryCount" class="text-2xl font-bold font-heading text-indigo-400">0 İşlem</div>
+        </div>
+
+      </div>
+
+      <!-- İki Sütunlu Düzen: Sol: Yeni Ödeme Formu, Sağ: Ödeme Tablosu -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- SOL SÜTUN (5/12): Yeni Ödeme Ekle Formu -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-5 sm:p-6 border border-slate-700/70 h-fit space-y-5">
+          
+          <div class="flex items-center gap-2.5 pb-2 border-b border-slate-800">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <div>
+              <h3 class="font-heading font-bold text-white text-base">Yeni Ödeme Kaydı Ekle</h3>
+              <p class="text-xs text-slate-400">Maaş, avans veya şantiye gideri kaydedin</p>
+            </div>
+          </div>
+
+          <form id="paymentForm" class="space-y-4">
+            
+            <!-- Ödeme Tarihi -->
+            <div>
+              <label for="paymentDate" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                <span>Ödeme Tarihi <span class="text-rose-400">*</span></span>
+                <button type="button" id="setPaymentTodayBtn" class="text-[11px] text-indigo-400 hover:text-indigo-300">Bugün</button>
+              </label>
+              <input type="date" id="paymentDate" required class="w-full px-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm">
+            </div>
+
+            <!-- Tutar (CAD$) -->
+            <div>
+              <label for="paymentAmount" class="block text-xs font-medium text-slate-300 mb-1">
+                Tutar (CAD$) <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">CAD$</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.01" 
+                  id="paymentAmount" 
+                  required 
+                  placeholder="0.00" 
+                  class="w-full pl-14 pr-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm font-semibold"
+                >
+              </div>
+            </div>
+
+            <!-- Alıcı / Personel / Konu -->
+            <div>
+              <label for="paymentRecipient" class="block text-xs font-medium text-slate-300 mb-1">
+                Alıcı / Personel / Konu <span class="text-rose-400">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="paymentRecipient" 
+                required 
+                placeholder="Alıcı / Personel veya konu" 
+                class="w-full px-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm"
+              >
+            </div>
+
+            <!-- Kategori ve Ödeme Yöntemi -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="paymentCategory" class="block text-xs font-medium text-slate-300 mb-1">
+                  Kategori <span class="text-rose-400">*</span>
+                </label>
+                <select id="paymentCategory" required class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
+                  <option value="Maaş">Maaş</option>
+                  <option value="Malzeme">Malzeme</option>
+                  <option value="Diğer">Diğer</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="paymentMethod" class="block text-xs font-medium text-slate-300 mb-1">Ödeme Yöntemi</label>
+                <select id="paymentMethod" class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
+                  <option value="Nakit">Nakit</option>
+                  <option value="Banka Havalesi">Banka Havalesi</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Ödeme Notu -->
+            <div>
+              <label for="paymentNotes" class="block text-xs font-medium text-slate-300 mb-1">
+                Ödeme Notu / Açıklama
+              </label>
+              <textarea 
+                id="paymentNotes" 
+                rows="2" 
+                placeholder="Ödeme açıklaması (opsiyonel)..." 
+                class="w-full px-3.5 py-2 rounded-xl custom-input text-xs resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Kaydet Butonu -->
+            <button 
+              type="submit" 
+              id="submitPaymentBtn" 
+              class="w-full py-3 px-4 rounded-xl text-white font-semibold text-xs sm:text-sm gradient-btn-success flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+            >
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Ödemeyi Kaydet</span>
+            </button>
+          </form>
+
+        </div>
+
+
+        <!-- SAĞ SÜTUN (7/12): Ödeme Geçmişi Tablosu ve Filtreler -->
+        <div class="lg:col-span-7 glass-panel rounded-2xl p-5 border border-slate-800 space-y-4">
+          
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
+              <h3 class="font-heading font-bold text-slate-200 text-base">Ödeme Geçmişi ve Kasa Çıkışları</h3>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <button id="exportPaymentsCsvBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Excel (CSV)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtreler -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <input type="text" id="paymentSearchInput" placeholder="Alıcı veya not ara..." class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+            </div>
+            <div>
+              <select id="paymentCategoryFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+                <option value="">Tüm Kategoriler</option>
+                <option value="Maaş">Maaş</option>
+                <option value="Malzeme">Malzeme</option>
+                <option value="Diğer">Diğer</option>
+              </select>
+            </div>
+            <div>
+              <select id="paymentMethodFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+                <option value="">Tüm Yöntemler</option>
+                <option value="Nakit">Nakit</option>
+                <option value="Banka Havalesi">Banka Havalesi</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ödemeler Tablosu -->
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 text-[11px] uppercase">
+                <tr>
+                  <th class="py-3 px-3">Tarih</th>
+                  <th class="py-3 px-3">Alıcı / Konu</th>
+                  <th class="py-3 px-3">Kategori</th>
+                  <th class="py-3 px-3">Yöntem</th>
+                  <th class="py-3 px-3">Tutar</th>
+                  <th class="py-3 px-3">Not</th>
+                  <th class="py-3 px-3 text-right no-print">İşlem</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                <tr>
+                  <td colspan="7" class="text-center py-6 text-slate-400">Ödemeler yükleniyor...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALLAR                                   -->
+  <!-- ========================================== -->
+
+  <!-- 1. Manuel Giriş-Çıkış Ekleme / Düzenleme Modalı -->
+  <div id="shiftModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden px-4">
+    <div class="glass-card w-full max-w-lg rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button id="closeShiftModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <h3 id="shiftModalTitle" class="text-lg font-bold font-heading text-white mb-4">Manuel Giriş-Çıkış Kaydı Ekle</h3>
+
+      <form id="modalShiftForm" class="space-y-4">
+        <input type="hidden" id="modalShiftId">
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Çalışan Adı Soyadı *</label>
+          <input type="text" id="modalEmployeeName" required placeholder="Personel adı soyadı" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Çalışma Yeri / Şantiye *</label>
+          <input type="text" id="modalWorkplace" required placeholder="Çalışma yeri / şantiye" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Giriş Saati *</label>
+            <input type="datetime-local" id="modalEntryTime" required class="w-full px-3 py-2 rounded-xl custom-input text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Çıkış Saati</label>
+            <input type="datetime-local" id="modalExitTime" class="w-full px-3 py-2 rounded-xl custom-input text-xs">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">İş / Vardiya Notu</label>
+          <textarea id="modalNotes" rows="2" placeholder="İş / vardiya notu (opsiyonel)..." class="w-full px-3.5 py-2 rounded-xl custom-input text-xs resize-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" id="cancelShiftModalBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Yönetici Şifre Değiştir Modalı -->
+  <div id="changePassModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden px-4">
+    <div class="glass-card w-full max-w-md rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button id="closeChangePassModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <h3 class="text-lg font-bold font-heading text-white mb-1">Yönetici Şifresini Değiştir</h3>
+      <p class="text-xs text-slate-400 mb-4">Mevcut şifrenizi doğrulayarak yeni şifre belirleyin.</p>
+
+      <form id="changePassForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Mevcut Şifre</label>
+          <input type="password" id="currentPassword" required class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Yeni Şifre (En az 5 karakter)</label>
+          <input type="password" id="newPassword" required minlength="5" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" id="cancelChangePassBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold">Şifreyi Güncelle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Dosyası -->
+  <script src="js/admin.js"></script>
+</body>
+</html>

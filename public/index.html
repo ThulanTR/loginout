@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personel Giriş-Çıkış & Vardiya Takip Paneli</title>
+  <meta name="description" content="Personel canlı kronometreli mesai, şantiye ve çalışma saatleri takip sistemi">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Arka Plan Dekoratif Işık Efektleri -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Üst Başlık & Navigasyon -->
+  <header class="relative z-10 sticky top-0 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo ve Başlık -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i data-lucide="clock" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold font-heading tracking-tight text-white flex items-center gap-2">
+            VardiyaTakip <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium border border-indigo-500/30">Çalışan Portali</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Personel Canlı Giriş - Çıkış & Mesai Takip Sistemi</p>
+        </div>
+      </div>
+
+      <!-- Canlı Saat & Yönetici Giriş Butonu -->
+      <div class="flex items-center space-x-3 sm:space-x-4">
+        <div class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-glow-emerald"></span>
+          <span id="liveClockText">Yükleniyor...</span>
+        </div>
+
+        <button id="openLoginModalBtn" class="flex items-center space-x-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-700 transition duration-200 shadow-sm hover:border-slate-600 hover:text-white">
+          <i data-lucide="lock" class="w-4 h-4 text-indigo-400"></i>
+          <span>Yönetici Girişi</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Ana İçerik -->
+  <main class="relative z-10 flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+    <!-- Karşılama Banner -->
+    <div class="text-center mb-8">
+      <div id="portalStatusBadge" class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-3">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+        <span id="portalStatusText">Otomatik Sunucu Zamanlı Vardiya Takibi</span>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-white tracking-tight">
+        Personel Giriş - Çıkış Paneli
+      </h2>
+      <p class="text-slate-400 text-sm mt-2 max-w-lg mx-auto">
+        Bilgilerinizi girip <strong>Giriş Yap</strong> butonuna basınız. Çalışma süreniz saniyesi saniyesine canlı olarak kaydedilecektir.
+      </p>
+    </div>
+
+    <!-- Giriş-Çıkış Ana Form Kartı -->
+    <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden border border-slate-700/70 shadow-2xl">
+      <div id="cardAccentBar" class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 transition-all duration-300"></div>
+
+      <!-- Durum Bildirim Şeridi (Aktif Vardiya Varsa Görünür) -->
+      <div id="activeShiftAlertBanner" class="hidden mb-6 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 text-xs sm:text-sm text-emerald-200">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+          <span class="font-semibold text-white">Vardiya Devam Ediyor:</span>
+          <span id="activeEmployeeSummaryText" class="text-emerald-300 font-medium">Ahmet Yılmaz</span>
+        </div>
+        <span class="text-[11px] text-emerald-400 font-mono bg-emerald-900/60 px-2 py-0.5 rounded border border-emerald-500/20">CANLI SAYAÇ</span>
+      </div>
+
+      <form id="shiftForm" class="space-y-6">
+        
+        <!-- Çalışan Adı ve Çalışma Yeri / Bölüm -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Çalışan Adı Soyadı -->
+          <div>
+            <label for="employeeName" class="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="user" class="w-4 h-4 text-indigo-400"></i>
+                <span>Çalışan Adı Soyadı</span>
+                <span class="text-rose-400">*</span>
+              </span>
+              <span id="employeeLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                <i data-lucide="lock" class="w-3 h-3"></i> Kilitli
+              </span>
+            </label>
+            <input 
+              type="text" 
+              id="employeeName" 
+              name="employeeName" 
+              list="employeeSuggestions" 
+              required 
+              placeholder="Adınızı ve soyadınızı giriniz" 
+              class="w-full px-4 py-3 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500"
+              autocomplete="off"
+            >
+            <datalist id="employeeSuggestions"></datalist>
+          </div>
+
+          <!-- Çalışma Yeri / Şantiye / Bölüm -->
+          <div>
+            <label for="workplace" class="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-4 h-4 text-indigo-400"></i>
+                <span>Çalışma Yeri / Şantiye / Bölüm</span>
+                <span class="text-rose-400">*</span>
+              </span>
+              <span id="workplaceLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+                <i data-lucide="lock" class="w-3 h-3"></i> Kilitli
+              </span>
+            </label>
+            <input 
+              type="text" 
+              id="workplace" 
+              name="workplace" 
+              list="workplaceSuggestions" 
+              required 
+              placeholder="Çalışma yerinizi / şantiyenizi giriniz" 
+              class="w-full px-4 py-3 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500"
+              autocomplete="off"
+            >
+            <datalist id="workplaceSuggestions"></datalist>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- CANLI KRONOMETRE VE VARDİYA SÜRE GÖSTERGESİ -->
+        <!-- ========================================== -->
+        <div id="stopwatchContainer" class="hidden">
+          <div class="relative rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-2 border-emerald-500/40 p-6 text-center shadow-inner overflow-hidden">
+            <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col items-center">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Canlı Çalışma Süresi</span>
+              </div>
+
+              <!-- Kronometre (Saat:Dakika:Saniye) -->
+              <div id="stopwatchDisplay" class="font-mono text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 my-2 drop-shadow-sm">
+                00:00:00
+              </div>
+
+              <!-- Giriş Zamanı Bilgisi -->
+              <div class="flex items-center justify-center gap-2 text-xs text-slate-400 mt-2 bg-slate-800/60 px-3.5 py-1.5 rounded-lg border border-slate-700/60">
+                <i data-lucide="log-in" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Giriş Zamanı:</span>
+                <strong id="activeEntryTimeDisplay" class="text-slate-200 font-semibold">-</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- İŞ / VARDİYA NOTU (ÇIKIŞ AŞAMASINDA AKTİF)  -->
+        <!-- ========================================== -->
+        <div id="shiftNotesContainer" class="hidden transition-all duration-300">
+          <label for="shiftNotes" class="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
+            <span>İş / Vardiya Notu</span>
+            <span class="text-slate-500 font-normal text-xs">(Opsiyonel - Çıkış yaparken kaydedilir)</span>
+          </label>
+          <textarea 
+            id="shiftNotes" 
+            name="notes" 
+            rows="2" 
+            placeholder="Bugün yapılan işler veya vardiya notları (opsiyonel)..." 
+            class="w-full px-4 py-2.5 rounded-xl custom-input text-sm placeholder:text-slate-500 resize-none"
+          ></textarea>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- BUTONLAR: GİRİŞ YAP & ÇIKIŞ YAP             -->
+        <!-- ========================================== -->
+        <div class="pt-2">
+          
+          <!-- Giriş Yap Butonu (Vardiya Yokken Aktif) -->
+          <button 
+            type="button" 
+            id="startShiftBtn" 
+            class="w-full py-4 px-6 rounded-xl text-white font-bold text-sm sm:text-base gradient-btn-success flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-600/25 transition active:scale-[0.99]"
+          >
+            <i data-lucide="log-in" class="w-5 h-5"></i>
+            <span>Giriş Yap (Vardiyayı Başlat)</span>
+          </button>
+
+          <!-- Çıkış Yap Butonu (Vardiya Açıkken Aktif) -->
+          <button 
+            type="button" 
+            id="endShiftBtn" 
+            class="hidden w-full py-4 px-6 rounded-xl text-white font-bold text-sm sm:text-base bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 flex items-center justify-center gap-2.5 shadow-xl shadow-rose-600/30 transition active:scale-[0.99]"
+          >
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+            <span>Çıkış Yap (Vardiyayı Tamamla)</span>
+          </button>
+
+        </div>
+      </form>
+    </div>
+
+    <!-- Alt Bilgilendirme Kartları -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+      
+      <!-- Kart 1: Kesintisiz Takip -->
+      <div class="glass-panel rounded-xl p-4.5 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center gap-2.5 text-slate-200 font-semibold text-sm mb-2">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-indigo-400"></i>
+          <span>Kesintisiz Sayaç</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Giriş yaptıktan sonra sayfayı yenileseniz veya tarayıcıyı kapatsanız bile açık vardiyanız hatırlanır ve sayaç devam eder.
+        </p>
+      </div>
+
+      <!-- Kart 2: Güvenli Sunucu Zamanı -->
+      <div class="glass-panel rounded-xl p-4.5 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center gap-2.5 text-slate-200 font-semibold text-sm mb-2">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+          <span>Sunucu Saati Koruması</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Tüm giriş ve çıkış saatleri güvenilir merkezi sunucu saatiyle SQLite veritabanına otomatik olarak mühürlenir.
+        </p>
+      </div>
+
+      <!-- Kart 3: Yönetici Erişimi -->
+      <div class="glass-panel rounded-xl p-4.5 border border-slate-800 flex flex-col justify-between">
+        <div class="flex items-center gap-2.5 text-slate-200 font-semibold text-sm mb-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+          <span>Yönetici Kontrolü</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Yöneticiler anlık olarak açık ve tamamlanmış tüm vardiyaları ve finansal kasa hareketlerini panelden inceleyebilir.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Son Bildirilen Kayıtlar Özeti (Mini Feed) -->
+    <div class="mt-8 glass-panel rounded-xl p-5 border border-slate-800">
+      <div class="flex items-center justify-between mb-3.5">
+        <div class="flex items-center gap-2 text-sm font-semibold text-slate-200">
+          <i data-lucide="list-checks" class="w-4 h-4 text-indigo-400"></i>
+          <span>Son İşlenen Giriş-Çıkış Hareketleri</span>
+        </div>
+        <span class="text-xs text-emerald-400 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Canlı Sistem
+        </span>
+      </div>
+      <div id="recentPublicShiftsList" class="space-y-2.5">
+        <div class="text-xs text-slate-400 text-center py-3">Kayıtlar yükleniyor...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Alt Bilgi (Footer) -->
+  <footer class="relative z-10 border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div>© 2026 Personel Takip ve Finans Yönetim Sistemi. Tüm hakları saklıdır.</div>
+      <div class="flex items-center gap-4 text-slate-400">
+        <span class="flex items-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5 text-indigo-400"></i> Yerel SQLite</span>
+        <span class="flex items-center gap-1"><i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i> Node.js Express</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Yönetici Girişi Modalı -->
+  <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden transition-opacity duration-200 px-4">
+    <div class="glass-card w-full max-w-md rounded-2xl p-6 sm:p-8 border border-slate-700 shadow-2xl relative">
+      
+      <!-- Kapat Butonu -->
+      <button id="closeLoginModalBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="lock" class="w-6 h-6 text-indigo-400"></i>
+        </div>
+        <h3 class="text-xl font-bold font-heading text-white">Yönetici Girişi</h3>
+        <p class="text-xs text-slate-400 mt-1">Personel ve finans yönetim paneline erişmek için giriş yapınız.</p>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label for="adminUsername" class="block text-xs font-medium text-slate-300 mb-1">Kullanıcı Adı</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-500 absolute left-3.5 top-3"></i>
+            <input 
+              type="text" 
+              id="adminUsername" 
+              required 
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl custom-input text-sm"
+              placeholder="Kullanıcı adınızı giriniz"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label for="adminPassword" class="block text-xs font-medium text-slate-300 mb-1">Yönetici Şifresi</label>
+          <div class="relative">
+            <i data-lucide="key" class="w-4 h-4 text-slate-500 absolute left-3.5 top-3"></i>
+            <input 
+              type="password" 
+              id="adminPassword" 
+              required 
+              placeholder="Şifrenizi giriniz" 
+              class="w-full pl-10 pr-10 py-2.5 rounded-xl custom-input text-sm"
+            >
+            <button type="button" id="togglePasswordVisibility" class="absolute right-3.5 top-3 text-slate-400 hover:text-white">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <i data-lucide="info" class="w-3 h-3 text-indigo-400"></i>
+            <span>Varsayılan şifre: <code class="text-indigo-300 font-mono bg-indigo-950/60 px-1 rounded">admin123</code></span>
+          </p>
+        </div>
+
+        <div class="pt-2">
+          <button 
+            type="submit" 
+            id="loginSubmitBtn" 
+            class="w-full py-2.5 px-4 rounded-xl text-white font-medium text-sm gradient-btn-primary flex items-center justify-center gap-2"
+          >
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>Panele Giriş Yap</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Dosyası -->
+  <script src="js/app.js"></script>
+</body>
+</html>
