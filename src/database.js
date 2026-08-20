@@ -80,17 +80,20 @@ function initDatabase() {
       console.log('✅ shifts tablosuna entry_longitude kolonu eklendi.');
     }
 
-    // Açık vardiyalarda eski/saat dilimsiz entry_time formatını UTC ISO formatına güncelle
-    const activeLegacyShifts = db.prepare("SELECT id, entry_time FROM shifts WHERE (status = 'active' OR exit_time IS NULL) AND entry_time NOT LIKE '%Z'").all();
-    if (activeLegacyShifts.length > 0) {
-      const updateEntryStmt = db.prepare("UPDATE shifts SET entry_time = ? WHERE id = ?");
-      activeLegacyShifts.forEach(s => {
-        try {
-          const iso = new Date(s.entry_time).toISOString();
-          updateEntryStmt.run(iso, s.id);
-        } catch(e) {}
+    // Aktif vardiyalarda saat dilimi (UTC ISO) düzeltmesi (Railway / Localhost uyumu)
+    try {
+      const activeRows = db.prepare("SELECT id, entry_time FROM shifts WHERE status = 'active' OR exit_time IS NULL").all();
+      activeRows.forEach(row => {
+        if (row.entry_time && !row.entry_time.endsWith('Z') && !row.entry_time.includes('+')) {
+          const parsed = new Date(row.entry_time.includes('T') ? row.entry_time + 'Z' : row.entry_time.replace(' ', 'T') + 'Z');
+          if (!isNaN(parsed.getTime())) {
+            db.prepare("UPDATE shifts SET entry_time = ? WHERE id = ?").run(parsed.toISOString(), row.id);
+            console.log(`✅ Açık vardiya #${row.id} entry_time UTC ISO formatına dönüştürüldü.`);
+          }
+        }
       });
-      console.log(`✅ ${activeLegacyShifts.length} adet açık vardiyanın entry_time değeri UTC ISO formatına dönüştürüldü.`);
+    } catch (tzErr) {
+      console.warn('Açık vardiya zaman dilimi kontrolü:', tzErr.message);
     }
   } catch (migErr) {
     console.error('Migrasyon kontrolü hatası:', migErr);

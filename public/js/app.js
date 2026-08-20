@@ -17,7 +17,7 @@ function padZero(num) {
   return String(num).padStart(2, '0');
 }
 
-// Güvenli Tarih Çözümleyici (UTC ISO formatı, Tarayıcı ve Saat Dilimi Uyumluluğu)
+// Güvenli Tarih Çözümleyici (UTC ISO-8601 ve Evrensel Saat Dilimi Desteği)
 function parseDateSafely(dateInput) {
   if (!dateInput) return null;
   if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
@@ -28,22 +28,23 @@ function parseDateSafely(dateInput) {
 
   const str = String(dateInput).trim();
 
-  // 1. Z ile biten veya timezone offset içeren standart UTC/ISO string'leri (new Date().toISOString())
-  if (str.endsWith('Z') || str.includes('+') || (str.includes('-') && str.lastIndexOf('-') > 7)) {
-    const d = new Date(str);
+  // 1. Standart Date ayrıştırması (Z ile biten UTC ISO stringlerini tüm tarayıcılarda evrensel olarak doğru çözer)
+  let d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d;
+  }
+
+  // 2. Safari / eski webview'lar için boşluklu formatı 'T' ve 'Z' ile dene (örn: "2026-08-20 14:30:00")
+  if (str.includes(' ') && !str.includes('T')) {
+    d = new Date(str.replace(' ', 'T') + (str.includes('Z') ? '' : 'Z'));
     if (!isNaN(d.getTime())) return d;
   }
 
-  // 2. Eğer saat dilimsiz ISO formatıysa (örn: 2026-08-20T16:46:00 veya boşluklu), UTC son eki ile dene
-  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) {
-    const isoWithZ = str.replace(' ', 'T') + 'Z';
-    const dUtc = new Date(isoWithZ);
-    if (!isNaN(dUtc.getTime())) return dUtc;
+  // 3. Fallback: Z içermeyen eski string'ler için UTC Z ekleyerek dene
+  if (!str.endsWith('Z') && !str.includes('+')) {
+    d = new Date(str + 'Z');
+    if (!isNaN(d.getTime())) return d;
   }
-
-  // 3. Standart Date constructor
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) return d;
 
   return null;
 }
@@ -93,14 +94,6 @@ function updateStopwatch(entryTimeISO) {
   const diffMs = now - startTime;
   const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
 
-  // Railway / Canlı Ortam Kontrolü için Konsol Logu
-  console.log('[Canlı Sayaç]', {
-    entry_time: entryTimeISO,
-    parsed_date: startDate.toISOString(),
-    diff_ms: diffMs,
-    diff_seconds: diffSeconds
-  });
-
   const hours = Math.floor(diffSeconds / 3600);
   const minutes = Math.floor((diffSeconds % 3600) / 60);
   const seconds = diffSeconds % 60;
@@ -112,6 +105,11 @@ function startStopwatch(entryTimeISO) {
   if (stopwatchInterval) {
     clearInterval(stopwatchInterval);
     stopwatchInterval = null;
+  }
+  const parsed = parseDateSafely(entryTimeISO);
+  if (parsed) {
+    const diffSec = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
+    console.log('[Canlı Sayaç]', { entryTime: entryTimeISO, parsedUTC: parsed.toISOString(), nowUTC: new Date().toISOString(), diffSeconds: diffSec });
   }
   // İlk çalıştırmada 1 saniye beklemeden anında ekrana yansıt
   updateStopwatch(entryTimeISO);
@@ -825,134 +823,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         console.error('Giriş isteği hatası:', err);
-          Swal.fire({
-            icon: 'error',
-            title: 'Hata',
-            text: 'Sunucuya ulaşılamadı.',
-            background: '#1e293b',
-            color: '#f8fafc',
-            confirmButtonColor: '#4f46e5'
-          });
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = `<span>Panele Giriş Yap</span>`;
-        }
-      });
-    }
-
-    // ==========================================
-    // ŞİFREMİ UNUTTUM / BASİT KURTARMA AKIŞI
-    // ==========================================
-    const forgotPassBtn = document.getElementById('forgotPasswordBtn');
-    if (forgotPassBtn) {
-      forgotPassBtn.addEventListener('click', async () => {
-        const { value: formValues } = await Swal.fire({
-          title: '🔑 Şifre Sıfırlama',
-          html: `
-            <p class="text-xs text-slate-300 mb-3 text-left">
-              Şifrenizi sıfırlamak için <code>.env</code> dosyanızdaki <strong>ADMIN_RECOVERY_CODE</strong> değerini ve yeni şifrenizi giriniz.
-            </p>
-            <div class="space-y-3 text-left">
-              <div>
-                <label class="block text-xs text-slate-300 mb-1 font-medium">Kurtarma Kodu (ADMIN_RECOVERY_CODE)</label>
-                <input id="swal-recovery-code" type="password" placeholder="Kurtarma kodunuzu giriniz" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs">
-              </div>
-              <div>
-                <label class="block text-xs text-slate-300 mb-1 font-medium">Yeni Şifre</label>
-                <input id="swal-recovery-newpass" type="password" placeholder="En az 5 karakter" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs">
-              </div>
-              <div>
-                <label class="block text-xs text-slate-300 mb-1 font-medium">Yeni Şifre (Tekrar)</label>
-                <input id="swal-recovery-confirmpass" type="password" placeholder="Yeni şifrenizi tekrar giriniz" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs">
-              </div>
-            </div>
-          `,
+        Swal.fire({
+          icon: 'error',
+          title: 'Hata',
+          text: 'Sunucuya ulaşılamadı.',
           background: '#1e293b',
           color: '#f8fafc',
-          showCancelButton: true,
-          confirmButtonText: 'Şifremi Sıfırla',
-          cancelButtonText: 'İptal',
-          confirmButtonColor: '#4f46e5',
-          cancelButtonColor: '#475569',
-          focusConfirm: false,
-          preConfirm: () => {
-            const recoveryCode = document.getElementById('swal-recovery-code').value.trim();
-            const newPassword = document.getElementById('swal-recovery-newpass').value;
-            const confirmPass = document.getElementById('swal-recovery-confirmpass').value;
-
-            if (!recoveryCode) {
-              Swal.showValidationMessage('Lütfen kurtarma kodunu giriniz.');
-              return false;
-            }
-            if (!newPassword || newPassword.length < 5) {
-              Swal.showValidationMessage('Yeni şifre en az 5 karakter olmalıdır.');
-              return false;
-            }
-            if (newPassword !== confirmPass) {
-              Swal.showValidationMessage('Yeni şifreler birbiriyle eşleşmiyor.');
-              return false;
-            }
-
-            return { recoveryCode, newPassword };
-          }
+          confirmButtonColor: '#4f46e5'
         });
-
-        if (!formValues) return;
-
-        try {
-          Swal.fire({
-            title: 'Sıfırlanıyor...',
-            text: 'Kurtarma kodu kontrol ediliyor.',
-            background: '#1e293b',
-            color: '#f8fafc',
-            allowOutsideClick: false,
-            didOpen: () => {
-              Swal.showLoading();
-            }
-          });
-
-          const response = await fetch('/api/auth/recover-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formValues)
-          });
-
-          const resData = await response.json();
-
-          if (response.ok && resData.success) {
-            await Swal.fire({
-              icon: 'success',
-              title: 'Başarılı!',
-              text: resData.message || 'Şifreniz başarıyla sıfırlandı.',
-              background: '#1e293b',
-              color: '#f8fafc',
-              confirmButtonColor: '#4f46e5'
-            });
-
-            // Giriş formundaki şifre alanını otomatik doldur
-            const passInput = document.getElementById('adminPassword');
-            if (passInput) passInput.value = formValues.newPassword;
-          } else {
-            Swal.fire({
-              icon: 'error',
-              title: 'Sıfırlama Başarısız',
-              text: resData.message || 'Kurtarma kodu hatalı.',
-              background: '#1e293b',
-              color: '#f8fafc',
-              confirmButtonColor: '#4f46e5'
-            });
-          }
-        } catch (err) {
-          console.error('Kurtarma isteği hatası:', err);
-          Swal.fire({
-            icon: 'error',
-            title: 'Hata',
-            text: 'Sunucuya bağlanılamadı.',
-            background: '#1e293b',
-            color: '#f8fafc',
-            confirmButtonColor: '#4f46e5'
-          });
-        }
-      });
-    }
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Panele Giriş Yap</span>`;
+      }
+    });
   }
 });

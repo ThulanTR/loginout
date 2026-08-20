@@ -43,7 +43,7 @@ function formatMoney(amount) {
   return `CAD$ ${formatted}`;
 }
 
-// Güvenli Tarih Çözümleyici (UTC ISO formatı, Tarayıcı ve Saat Dilimi Uyumluluğu)
+// Güvenli Tarih Çözümleyici (UTC ISO-8601 ve Evrensel Saat Dilimi Desteği)
 function parseDateSafely(dateInput) {
   if (!dateInput) return null;
   if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
@@ -53,25 +53,29 @@ function parseDateSafely(dateInput) {
   }
 
   const str = String(dateInput).trim();
+  let d = new Date(str);
+  if (!isNaN(d.getTime())) return d;
 
-  // 1. Z ile biten veya timezone offset içeren standart UTC/ISO string'leri
-  if (str.endsWith('Z') || str.includes('+') || (str.includes('-') && str.lastIndexOf('-') > 7)) {
-    const d = new Date(str);
+  if (str.includes(' ') && !str.includes('T')) {
+    d = new Date(str.replace(' ', 'T') + (str.includes('Z') ? '' : 'Z'));
     if (!isNaN(d.getTime())) return d;
   }
 
-  // 2. Eğer saat dilimsiz ISO formatıysa (örn: 2026-08-20T16:46:00 veya boşluklu), UTC son eki ile dene
-  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(str)) {
-    const isoWithZ = str.replace(' ', 'T') + 'Z';
-    const dUtc = new Date(isoWithZ);
-    if (!isNaN(dUtc.getTime())) return dUtc;
+  if (!str.endsWith('Z') && !str.includes('+')) {
+    d = new Date(str + 'Z');
+    if (!isNaN(d.getTime())) return d;
   }
 
-  // 3. Standart Date constructor
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) return d;
-
   return null;
+}
+
+// Tarih/Saat girdileri için yerel formatlayıcı (YYYY-MM-DDTHH:mm)
+function toLocalInputString(dateInput) {
+  if (!dateInput) return '';
+  const d = parseDateSafely(dateInput);
+  if (!d) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // Tarih Formatlayıcı
@@ -578,8 +582,8 @@ window.openEditShiftModal = function(id) {
   document.getElementById('modalShiftId').value = shift.id;
   document.getElementById('modalEmployeeName').value = shift.employee_name;
   document.getElementById('modalWorkplace').value = shift.workplace;
-  document.getElementById('modalEntryTime').value = shift.entry_time ? shift.entry_time.slice(0, 16) : '';
-  document.getElementById('modalExitTime').value = shift.exit_time ? shift.exit_time.slice(0, 16) : '';
+  document.getElementById('modalEntryTime').value = toLocalInputString(shift.entry_time);
+  document.getElementById('modalExitTime').value = toLocalInputString(shift.exit_time);
   document.getElementById('modalNotes').value = shift.notes || '';
 
   document.getElementById('shiftModal').classList.remove('hidden');
@@ -590,14 +594,7 @@ function openNewShiftModal() {
   document.getElementById('shiftModalTitle').textContent = 'Manuel Giriş-Çıkış Kaydı Ekle';
   document.getElementById('modalShiftId').value = '';
   document.getElementById('modalShiftForm').reset();
-  
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  document.getElementById('modalEntryTime').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+  document.getElementById('modalEntryTime').value = toLocalInputString(new Date());
 
   document.getElementById('shiftModal').classList.remove('hidden');
   refreshIcons();
@@ -1050,8 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
           title: 'Şifre Güncellendi!',
           text: 'Yeni şifreniz başarıyla kaydedildi.',
           background: '#1e293b',
-          color: '#f8fafc',
-          confirmButtonColor: '#4f46e5'
+          color: '#f8fafc'
         });
       } else {
         Swal.fire({ icon: 'error', title: 'Hata', text: data.message, background: '#1e293b', color: '#f8fafc' });

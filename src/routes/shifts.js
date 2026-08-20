@@ -3,7 +3,15 @@ const router = express.Router();
 const { db } = require('../database');
 const { authenticateToken } = require('../auth');
 
-// Süre hesaplama fonksiyonu (dakika cinsinden, UTC ISO ve tüm formatları destekler)
+// Tarih formatlayıcı yardımcı: Her zaman evrensel UTC ISO-8601 formatı (Z sonlu)
+function toIsoDateTime(dateInput = new Date()) {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return dateInput.toISOString();
+  const d = new Date(dateInput);
+  return isNaN(d.getTime()) ? String(dateInput) : d.toISOString();
+}
+
+// Süre hesaplama fonksiyonu (dakika cinsinden)
 function calculateDurationMinutes(entryTime, exitTime) {
   if (!entryTime || !exitTime) return 0;
   const start = new Date(entryTime).getTime();
@@ -12,16 +20,6 @@ function calculateDurationMinutes(entryTime, exitTime) {
   const diffMs = end - start;
   if (diffMs <= 0) return 0;
   return Math.round(diffMs / (1000 * 60));
-}
-
-// Tarih stringini standart UTC ISO formatına dönüştürme yardımcısı
-function normalizeToISO(dateInput) {
-  if (!dateInput) return null;
-  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput.toISOString();
-  const str = String(dateInput).trim();
-  if (str.endsWith('Z')) return str;
-  const parsed = new Date(str);
-  return isNaN(parsed.getTime()) ? str : parsed.toISOString();
 }
 
 // Süreyi okunabilir metne dönüştürme (Örn: "8 sa 30 dk")
@@ -102,15 +100,15 @@ router.post('/start', (req, res) => {
       });
     }
 
-    // Sunucu saati ile UTC ISO formatında entry_time oluştur
-    const entry_time = new Date().toISOString();
+    // Sunucu saati ile UTC ISO formatında entry_time oluştur (Railway ve Localhost için evrensel Z formatı)
+    const entry_time = toIsoDateTime(new Date());
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, NULL, 0, 'active', NULL, ?, ?, ?)
+      VALUES (?, ?, ?, NULL, 0, 'active', NULL, ?, ?, datetime('now', 'localtime'))
     `);
 
-    const result = stmt.run(cleanName, cleanPlace, entry_time, latVal, lngVal, entry_time);
+    const result = stmt.run(cleanName, cleanPlace, entry_time, latVal, lngVal);
     const shiftId = result.lastInsertRowid;
 
     res.status(201).json({
@@ -164,8 +162,8 @@ router.put('/:id/end', (req, res) => {
       });
     }
 
-    // Sunucu saati ile UTC ISO formatında exit_time oluştur
-    const exit_time = new Date().toISOString();
+    // Sunucu saati ile UTC ISO formatında exit_time oluştur (Z formatı)
+    const exit_time = toIsoDateTime(new Date());
     const durationMinutes = calculateDurationMinutes(shift.entry_time, exit_time);
     const finalNotes = (notes !== undefined && notes !== null && notes.trim() !== '') ? notes.trim() : (shift.notes || null);
 
@@ -267,28 +265,29 @@ router.post('/', (req, res) => {
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
   try {
-    const normEntry = normalizeToISO(entry_time);
-    const normExit = exit_time ? normalizeToISO(exit_time) : null;
-    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
-    const status = normExit ? 'completed' : 'active';
-    const nowIso = new Date().toISOString();
+    const normalizedEntry = toIsoDateTime(entry_time);
+    const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+    let durationMinutes = 0;
+    const status = normalizedExit ? 'completed' : 'active';
+    if (normalizedExit) {
+      durationMinutes = calculateDurationMinutes(normalizedEntry, normalizedExit);
+    }
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     `);
 
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      normEntry,
-      normExit,
+      normalizedEntry,
+      normalizedExit || null,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal,
-      nowIso
+      lngVal
     );
 
     res.status(201).json({
@@ -336,7 +335,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     if (endDate && endDate.trim() !== '') {
       query += ' AND entry_time <= ?';
-      params.push(endDate.trim().includes('T') ? endDate.trim() : `${endDate.trim()}T23:59:59`);
+      params.push(endDate.trim().includes('T') ? endDate.trim() : `${endDate.trim()}T23:59:59.999Z`);
     }
 
     query += ' ORDER BY entry_time DESC, id DESC';
@@ -394,28 +393,26 @@ router.post('/admin', authenticateToken, (req, res) => {
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
   try {
-    const normEntry = normalizeToISO(entry_time);
-    const normExit = exit_time ? normalizeToISO(exit_time) : null;
-    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
-    const status = normExit ? 'completed' : 'active';
-    const nowIso = new Date().toISOString();
+    const normalizedEntry = toIsoDateTime(entry_time);
+    const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+    const durationMinutes = normalizedExit ? calculateDurationMinutes(normalizedEntry, normalizedExit) : 0;
+    const status = normalizedExit ? 'completed' : 'active';
 
     const stmt = db.prepare(`
       INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     `);
 
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      normEntry,
-      normExit,
+      normalizedEntry,
+      normalizedExit || null,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal,
-      nowIso
+      lngVal
     );
 
     res.status(201).json({
@@ -442,10 +439,10 @@ router.put('/:id', authenticateToken, (req, res) => {
   }
 
   try {
-    const normEntry = normalizeToISO(entry_time);
-    const normExit = exit_time ? normalizeToISO(exit_time) : null;
-    const durationMinutes = normExit ? calculateDurationMinutes(normEntry, normExit) : 0;
-    const status = normExit ? 'completed' : 'active';
+    const normalizedEntry = toIsoDateTime(entry_time);
+    const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+    const durationMinutes = normalizedExit ? calculateDurationMinutes(normalizedEntry, normalizedExit) : 0;
+    const status = normalizedExit ? 'completed' : 'active';
 
     // Mevcut kaydı çek ki konum üzerine yazılmasın (eğer gönderilmemişse)
     const existing = db.prepare('SELECT entry_latitude, entry_longitude FROM shifts WHERE id = ?').get(id);
@@ -461,8 +458,8 @@ router.put('/:id', authenticateToken, (req, res) => {
     const result = stmt.run(
       employee_name.trim(),
       workplace.trim(),
-      normEntry,
-      normExit,
+      normalizedEntry,
+      normalizedExit || null,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
