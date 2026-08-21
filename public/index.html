@@ -116,17 +116,18 @@
 
       <form id="shiftForm" class="space-y-5 sm:space-y-6">
         
-        <!-- Çalışan Adı ve Çalışma Yeri / Bölüm -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-          <!-- Çalışan Adı Soyadı -->
+        <!-- Çalışan Bilgileri (İki Sütunlu Dengeli Izgara) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          <!-- 1. Alan: Çalışan Adı Soyadı -->
           <div>
-            <label for="employeeName" class="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+            <label for="employeeName" class="block text-xs sm:text-sm font-medium text-slate-300 mb-2 flex items-center justify-between">
               <span class="flex items-center gap-1.5">
                 <i data-lucide="user" class="w-4 h-4 text-indigo-400"></i>
                 <span data-i18n="portal_employee_name">Çalışan Adı Soyadı</span>
                 <span class="text-rose-400">*</span>
               </span>
-              <span id="employeeLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+              <span id="employeeLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-500/30 flex items-center gap-1">
                 <i data-lucide="lock" class="w-3 h-3"></i> <span data-i18n="portal_locked">Kilitli</span>
               </span>
             </label>
@@ -138,21 +139,21 @@
               required 
               placeholder="Adınızı ve soyadınızı giriniz" 
               data-i18n-placeholder="portal_employee_name_placeholder"
-              class="w-full px-4 py-3 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500"
+              class="w-full px-4 py-3.5 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 shadow-inner"
               autocomplete="off"
             >
             <datalist id="employeeSuggestions"></datalist>
           </div>
 
-          <!-- Çalışma Yeri / Şantiye / Bölüm -->
+          <!-- 2. Alan: Çalışma Yeri (Datalistsiz / Serbest Giriş) -->
           <div>
-            <label for="workplace" class="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+            <label for="workplace" class="block text-xs sm:text-sm font-medium text-slate-300 mb-2 flex items-center justify-between">
               <span class="flex items-center gap-1.5">
-                <i data-lucide="map-pin" class="w-4 h-4 text-indigo-400"></i>
-                <span data-i18n="portal_workplace">Çalışma Yeri / Şantiye / Bölüm</span>
+                <i data-lucide="building" class="w-4 h-4 text-indigo-400"></i>
+                <span data-i18n="work_location">Çalışma Yeri</span>
                 <span class="text-rose-400">*</span>
               </span>
-              <span id="workplaceLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 flex items-center gap-1">
+              <span id="workplaceLockBadge" class="hidden text-[11px] text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-lg border border-amber-500/30 flex items-center gap-1">
                 <i data-lucide="lock" class="w-3 h-3"></i> <span data-i18n="portal_locked">Kilitli</span>
               </span>
             </label>
@@ -160,15 +161,14 @@
               type="text" 
               id="workplace" 
               name="workplace" 
-              list="workplaceSuggestions" 
               required 
-              placeholder="Çalışma yerinizi / şantiyenizi giriniz" 
-              data-i18n-placeholder="portal_workplace_placeholder"
-              class="w-full px-4 py-3 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500"
+              placeholder="Çalışma yerini giriniz" 
+              data-i18n-placeholder="work_location_placeholder"
+              class="w-full px-4 py-3.5 rounded-xl custom-input text-sm placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 shadow-inner"
               autocomplete="off"
             >
-            <datalist id="workplaceSuggestions"></datalist>
           </div>
+
         </div>
 
         <!-- ========================================== -->

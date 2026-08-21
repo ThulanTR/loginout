@@ -50,17 +50,27 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     `).get(`${todayPrefix}%`);
     const todayActiveCount = todayActiveRow.count || 0;
 
-    // 3. Toplam Yapılan Ödeme Tutarı
-    const totalPayRow = db.prepare('SELECT SUM(amount) as total FROM payments').get();
-    const totalPayments = totalPayRow.total || 0;
+    // 3. Toplam Gelir ve Gider Tutarları
+    const totalIncomeRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE type = 'income'").get();
+    const totalExpenseRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE type != 'income'").get();
+    const totalIncome = totalIncomeRow.total || 0;
+    const totalExpense = totalExpenseRow.total || 0;
+    const netBalance = totalIncome - totalExpense;
 
-    // 4. Bu Ay Yapılan Toplam Ödeme
-    const thisMonthPayRow = db.prepare(`
+    // 4. Bu Ayki Gelir ve Gider
+    const thisMonthIncomeRow = db.prepare(`
       SELECT SUM(amount) as total 
       FROM payments 
-      WHERE payment_date LIKE ?
+      WHERE type = 'income' AND payment_date LIKE ?
     `).get(`${currentMonthPrefix}%`);
-    const thisMonthPayments = thisMonthPayRow.total || 0;
+    const thisMonthExpenseRow = db.prepare(`
+      SELECT SUM(amount) as total 
+      FROM payments 
+      WHERE type != 'income' AND payment_date LIKE ?
+    `).get(`${currentMonthPrefix}%`);
+    const thisMonthIncome = thisMonthIncomeRow.total || 0;
+    const thisMonthExpense = thisMonthExpenseRow.total || 0;
+    const thisMonthBalance = thisMonthIncome - thisMonthExpense;
 
     // 5. Son 7 Günlük Çalışma Saatleri Dağılımı (Grafik için)
     const days = [];
@@ -103,7 +113,7 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     `).all();
 
     const recentPayments = db.prepare(`
-      SELECT id, payment_date, amount, recipient, category, payment_method, created_at
+      SELECT id, type, payment_date, amount, recipient, category, payment_method, created_at
       FROM payments 
       ORDER BY created_at DESC, id DESC 
       LIMIT 8
@@ -113,12 +123,13 @@ router.get('/dashboard', authenticateToken, (req, res) => {
 
     recentShifts.forEach(s => {
       const isActive = s.status === 'active' || !s.exit_time;
+      const placeText = s.workplace ? `${s.workplace} - ` : '';
       timelineEvents.push({
         type: 'shift',
         id: s.id,
         status: isActive ? 'active' : 'completed',
         title: isActive ? `${s.employee_name} (Giriş Yapıldı)` : `${s.employee_name} vardiya kaydı`,
-        description: isActive ? `${s.workplace} - Devam Ediyor` : `${s.workplace} - Süre: ${(s.duration_minutes / 60).toFixed(1)} saat`,
+        description: isActive ? `${placeText}Devam Ediyor` : `${placeText}Süre: ${(s.duration_minutes / 60).toFixed(1)} saat`,
         rawDate: s.created_at || s.entry_time,
         timeAgo: timeAgo(s.created_at || s.entry_time),
         badgeColor: isActive ? 'amber' : 'blue',
@@ -127,15 +138,17 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     });
 
     recentPayments.forEach(p => {
+      const isIncome = p.type === 'income';
       timelineEvents.push({
         type: 'payment',
+        paymentType: isIncome ? 'income' : 'expense',
         id: p.id,
-        title: `${formatCurrency(p.amount)} ödeme yapıldı`,
-        description: `Ödeme Yapan: ${p.recipient} (${p.category} - ${p.payment_method})`,
+        title: isIncome ? `${formatCurrency(p.amount)} tahsilat (Gelir)` : `${formatCurrency(p.amount)} ödeme (Gider)`,
+        description: `${isIncome ? 'Ödeme Yapan' : 'Ödeme Yapılan'}: ${p.recipient} (${p.category} - ${p.payment_method})`,
         rawDate: p.created_at || p.payment_date,
         timeAgo: timeAgo(p.created_at || p.payment_date),
-        badgeColor: 'emerald',
-        icon: 'banknote'
+        badgeColor: isIncome ? 'emerald' : 'rose',
+        icon: isIncome ? 'arrow-down-left' : 'arrow-up-right'
       });
     });
 
@@ -143,23 +156,37 @@ router.get('/dashboard', authenticateToken, (req, res) => {
     timelineEvents.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
     const finalTimeline = timelineEvents.slice(0, 10);
 
-    const totalIncome = totalPayments;
-    const thisMonthIncome = thisMonthPayments;
-
     res.json({
       success: true,
       stats: {
+        total_shifts: totalShifts,
         totalShifts,
-        totalWorkHours,
+        total_hours: parseFloat(totalWorkHours),
+        totalWorkHours: parseFloat(totalWorkHours),
+        total_hours_formatted: `${totalWorkHours} Saat`,
+        totalHoursFormatted: `${totalWorkHours} Saat`,
         todayActiveCount,
-        totalPayments,
-        totalPaymentsFormatted: formatCurrency(totalPayments),
+        today_active_count: todayActiveCount,
+        total_income: totalIncome,
         totalIncome,
+        total_income_formatted: formatCurrency(totalIncome),
         totalIncomeFormatted: formatCurrency(totalIncome),
-        thisMonthPayments,
-        thisMonthPaymentsFormatted: formatCurrency(thisMonthPayments),
+        total_expense: totalExpense,
+        totalExpense,
+        total_expense_formatted: formatCurrency(totalExpense),
+        totalExpenseFormatted: formatCurrency(totalExpense),
+        totalPayments: totalExpense,
+        totalPaymentsFormatted: formatCurrency(totalExpense),
+        netBalance,
+        netBalanceFormatted: formatCurrency(netBalance),
         thisMonthIncome,
-        thisMonthIncomeFormatted: formatCurrency(thisMonthIncome)
+        thisMonthIncomeFormatted: formatCurrency(thisMonthIncome),
+        thisMonthExpense,
+        thisMonthExpenseFormatted: formatCurrency(thisMonthExpense),
+        thisMonthPayments: thisMonthExpense,
+        thisMonthPaymentsFormatted: formatCurrency(thisMonthExpense),
+        thisMonthBalance,
+        thisMonthBalanceFormatted: formatCurrency(thisMonthBalance)
       },
       weeklyChart: days,
       categoryChart: categoryRows.map(c => ({

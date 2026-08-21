@@ -148,7 +148,7 @@
       <!-- 4 Ana Metrik Kartı -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         
-        <!-- Kart 1: Toplam Giriş-Çıkış Kaydı -->
+        <!-- Kart 1: Toplam Vardiya Kaydı -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_shifts">Toplam Vardiya Kaydı</span>
@@ -164,18 +164,18 @@
           </div>
         </div>
 
-        <!-- Kart 2: Bugün Çalışan Personel -->
+        <!-- Kart 2: Toplam Çalışılan Saat -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400" data-i18n="stat_today_active">Bugün Çalışan Personel</span>
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_hours">Toplam Çalışılan Saat</span>
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+              <i data-lucide="clock" class="w-5 h-5 text-indigo-400"></i>
             </div>
           </div>
           <div class="flex items-baseline justify-between">
-            <h3 id="statTodayActive" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0</h3>
-            <span class="text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
-              <i data-lucide="activity" class="w-3 h-3"></i> <span data-i18n="stat_today">Bugün</span>
+            <h3 id="statTotalHours" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0 Saat</h3>
+            <span class="text-xs text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-500/20 flex items-center gap-1">
+              <i data-lucide="activity" class="w-3 h-3"></i> <span data-i18n="stat_total_work_badge">Toplam Mesai</span>
             </span>
           </div>
         </div>
@@ -183,28 +183,28 @@
         <!-- Kart 3: Toplam Alınan Ödeme -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_payments">Toplam Yapılan Ödeme</span>
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <i data-lucide="banknote" class="w-5 h-5 text-amber-400"></i>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_income">Toplam Alınan Ödeme</span>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <i data-lucide="arrow-down-left" class="w-5 h-5 text-emerald-400"></i>
             </div>
           </div>
           <div class="flex items-baseline justify-between">
-            <h3 id="statTotalPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-amber-300">CAD$ 0.00</h3>
-            <span class="text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/20" data-i18n="stat_general_cash">Genel Kasa</span>
+            <h3 id="statTotalIncome" class="text-xl sm:text-2xl font-extrabold font-heading text-emerald-400">CAD$ 0.00</h3>
+            <span class="text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20" data-i18n="stat_badge_income">Toplam Gelir</span>
           </div>
         </div>
 
-        <!-- Kart 4: Bu Ayki Kazanç -->
+        <!-- Kart 4: Toplam Yapılan Gider -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400" data-i18n="stat_this_month_payments">Bu Ayki Gider / Ödeme</span>
-            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <i data-lucide="calendar" class="w-5 h-5 text-purple-400"></i>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_expense">Toplam Yapılan Gider</span>
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+              <i data-lucide="arrow-up-right" class="w-5 h-5 text-rose-400"></i>
             </div>
           </div>
           <div class="flex items-baseline justify-between">
-            <h3 id="statThisMonthPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-purple-300">CAD$ 0.00</h3>
-            <span class="text-xs text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-500/20" data-i18n="stat_this_month">Bu Ay</span>
+            <h3 id="statTotalExpense" class="text-xl sm:text-2xl font-extrabold font-heading text-rose-400">CAD$ 0.00</h3>
+            <span class="text-xs text-rose-300 bg-rose-950/60 px-2 py-0.5 rounded-md border border-rose-500/20" data-i18n="stat_badge_expense">Toplam Gider</span>
           </div>
         </div>
 
@@ -352,7 +352,7 @@
         </div>
 
         <!-- Filtre Giriş Alanları -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <!-- İsim / Not Arama -->
           <div>
             <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_search_label">Personel / Not Ara</label>
@@ -360,14 +360,6 @@
               <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5"></i>
               <input type="text" id="shiftSearchInput" placeholder="İsim veya not..." data-i18n-placeholder="filter_search_placeholder" class="w-full pl-8 pr-3 py-1.5 rounded-lg custom-input text-xs">
             </div>
-          </div>
-
-          <!-- Şantiye / Bölüm Seçimi -->
-          <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_workplace_label">Çalışma Yeri / Şantiye</label>
-            <select id="shiftWorkplaceFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
-              <option value="" data-i18n="filter_all_workplaces">Tümü (Tüm Şantiyeler)</option>
-            </select>
           </div>
 
           <!-- Başlangıç Tarihi -->
@@ -407,7 +399,7 @@
               <tr>
                 <th class="py-3.5 px-4" data-i18n="th_date">Tarih</th>
                 <th class="py-3.5 px-4" data-i18n="th_employee_name">Çalışan Adı Soyadı</th>
-                <th class="py-3.5 px-4" data-i18n="th_workplace">Çalışma Yeri / Şantiye</th>
+                <th class="py-3.5 px-4" data-i18n="th_workplace">Çalışma Yeri</th>
                 <th class="py-3.5 px-4" data-i18n="th_location">Konum</th>
                 <th class="py-3.5 px-4" data-i18n="th_entry_time">Giriş Saati</th>
                 <th class="py-3.5 px-4" data-i18n="th_exit_time">Çıkış Saati</th>
@@ -433,22 +425,40 @@
     <!-- ========================================== -->
     <section id="tabContent-finance" class="tab-pane hidden space-y-6">
       
-      <!-- Finansal Özet Kartları -->
+      <!-- Finansal Özet Kartları (Gelir, Gider, Net Bakiye) -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
+        <!-- Kart 1: Toplam Gelir (Alınan Ödeme) -->
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_total_payment">Toplam Alınan Ödeme</div>
-          <div id="financeSummaryTotal" class="text-2xl font-bold font-heading text-white">CAD$ 0.00</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium text-slate-400" data-i18n="finance_total_income">Toplam Gelir (Alınan)</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="arrow-down-left" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+          <div id="financeSummaryTotalIncome" class="text-2xl font-bold font-heading text-emerald-400">CAD$ 0.00</div>
         </div>
 
+        <!-- Kart 2: Toplam Gider (Yapılan Ödeme) -->
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_this_month">Bu Ayki Kazanç</div>
-          <div id="financeSummaryThisMonth" class="text-2xl font-bold font-heading text-emerald-400">CAD$ 0.00</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium text-slate-400" data-i18n="finance_total_expense">Toplam Gider (Yapılan)</span>
+            <span class="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+          <div id="financeSummaryTotalExpense" class="text-2xl font-bold font-heading text-rose-400">CAD$ 0.00</div>
         </div>
 
+        <!-- Kart 3: Net Kasa Bakiyesi -->
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_total_count">Toplam Ödeme Sayısı</div>
-          <div id="financeSummaryCount" class="text-2xl font-bold font-heading text-indigo-400">0 İşlem</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium text-slate-400" data-i18n="finance_net_balance">Net Kasa Bakiyesi</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+          <div id="financeSummaryNetBalance" class="text-2xl font-bold font-heading text-indigo-300">CAD$ 0.00</div>
         </div>
 
       </div>
@@ -465,12 +475,28 @@
             </div>
             <div>
               <h3 class="font-heading font-bold text-white text-base" data-i18n="form_new_payment_title">Yeni Ödeme Kaydı Ekle</h3>
-              <p class="text-xs text-slate-400" data-i18n="form_new_payment_desc">Maaş, avans veya şantiye gideri kaydedin</p>
             </div>
           </div>
 
           <form id="paymentForm" class="space-y-4">
             
+            <!-- İşlem Türü Seçici (Gelir / Gider Segment Butonları) -->
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5" data-i18n="form_payment_type">İşlem Türü *</label>
+              <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-700/80">
+                <label id="paymentTypeIncomeLabel" class="payment-type-option flex items-center justify-center gap-2 py-2 px-3 rounded-lg cursor-pointer text-xs font-semibold transition border border-transparent has-[:checked]:bg-emerald-600/30 has-[:checked]:border-emerald-500/50 has-[:checked]:text-emerald-300 text-slate-400 hover:text-white">
+                  <input type="radio" name="paymentType" value="income" class="hidden">
+                  <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-400"></i>
+                  <span data-i18n="type_income">Gelir (Alınan)</span>
+                </label>
+                <label id="paymentTypeExpenseLabel" class="payment-type-option flex items-center justify-center gap-2 py-2 px-3 rounded-lg cursor-pointer text-xs font-semibold transition border border-transparent has-[:checked]:bg-rose-600/30 has-[:checked]:border-rose-500/50 has-[:checked]:text-rose-300 text-slate-400 hover:text-white">
+                  <input type="radio" name="paymentType" value="expense" checked class="hidden">
+                  <i data-lucide="arrow-up-right" class="w-4 h-4 text-rose-400"></i>
+                  <span data-i18n="type_expense">Gider (Yapılan)</span>
+                </label>
+              </div>
+            </div>
+
             <!-- Ödeme Tarihi -->
             <div>
               <label for="paymentDate" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
@@ -499,16 +525,16 @@
               </div>
             </div>
 
-            <!-- Ödeme Yapan / Alan -->
+            <!-- Kişi / Firma / Kurum -->
             <div>
               <label for="paymentRecipient" class="block text-xs font-medium text-slate-300 mb-1">
-                <span data-i18n="form_recipient">Ödeme Yapan / Alan</span> <span class="text-rose-400">*</span>
+                <span id="paymentRecipientLabel" data-i18n="form_recipient">Kişi / Firma / Kurum</span> <span class="text-rose-400">*</span>
               </label>
               <input 
                 type="text" 
                 id="paymentRecipient" 
                 required 
-                placeholder="Ödeme yapan kişi / personel / konu" 
+                placeholder="Ödeme yapan müşteri veya ödeme yapılan personel/tedarikçi" 
                 data-i18n-placeholder="form_recipient_placeholder"
                 class="w-full px-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm"
               >
@@ -522,7 +548,10 @@
                 </label>
                 <select id="paymentCategory" required class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
                   <option value="Maaş" data-i18n="cat_salary">Maaş</option>
+                  <option value="Avans" data-i18n="cat_advance">Avans</option>
                   <option value="Malzeme" data-i18n="cat_material">Malzeme</option>
+                  <option value="Yemek/Yol" data-i18n="cat_food_travel">Yemek/Yol</option>
+                  <option value="Prim" data-i18n="cat_bonus">Prim</option>
                   <option value="Diğer" data-i18n="cat_other">Diğer</option>
                 </select>
               </div>
@@ -532,6 +561,7 @@
                 <select id="paymentMethod" class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
                   <option value="Nakit" data-i18n="method_cash">Nakit</option>
                   <option value="Banka Havalesi" data-i18n="method_bank">Banka Havalesi</option>
+                  <option value="Kredi Kartı" data-i18n="method_cc">Kredi Kartı</option>
                 </select>
               </div>
             </div>
@@ -570,7 +600,7 @@
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
             <div class="flex items-center gap-2">
               <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
-              <h3 class="font-heading font-bold text-slate-200 text-base" data-i18n="payment_history_title">Ödeme Geçmişi ve Kasa Çıkışları</h3>
+              <h3 class="font-heading font-bold text-slate-200 text-base" data-i18n="payment_history_title">Ödeme Geçmişi</h3>
             </div>
             
             <div class="flex items-center gap-2">
@@ -582,15 +612,25 @@
           </div>
 
           <!-- Filtreler -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
             <div>
-              <input type="text" id="paymentSearchInput" placeholder="Ödeme yapan veya not ara..." data-i18n-placeholder="filter_payment_search" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+              <input type="text" id="paymentSearchInput" placeholder="Kişi, kurum veya not ara..." data-i18n-placeholder="filter_payment_search" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+            </div>
+            <div>
+              <select id="paymentTypeFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+                <option value="" data-i18n="filter_all_types">Tüm Türler</option>
+                <option value="income" data-i18n="filter_type_income">🟢 Sadece Gelirler (+)</option>
+                <option value="expense" data-i18n="filter_type_expense">🔴 Sadece Giderler (-)</option>
+              </select>
             </div>
             <div>
               <select id="paymentCategoryFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
                 <option value="" data-i18n="filter_all_categories">Tüm Kategoriler</option>
                 <option value="Maaş" data-i18n="cat_salary">Maaş</option>
+                <option value="Avans" data-i18n="cat_advance">Avans</option>
                 <option value="Malzeme" data-i18n="cat_material">Malzeme</option>
+                <option value="Yemek/Yol" data-i18n="cat_food_travel">Yemek/Yol</option>
+                <option value="Prim" data-i18n="cat_bonus">Prim</option>
                 <option value="Diğer" data-i18n="cat_other">Diğer</option>
               </select>
             </div>
@@ -599,6 +639,7 @@
                 <option value="" data-i18n="filter_all_methods">Tüm Yöntemler</option>
                 <option value="Nakit" data-i18n="method_cash">Nakit</option>
                 <option value="Banka Havalesi" data-i18n="method_bank">Banka Havalesi</option>
+                <option value="Kredi Kartı" data-i18n="method_cc">Kredi Kartı</option>
               </select>
             </div>
           </div>
@@ -609,7 +650,8 @@
               <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 text-[11px] uppercase">
                 <tr>
                   <th class="py-3 px-3" data-i18n="th_date">Tarih</th>
-                  <th class="py-3 px-3" data-i18n="th_recipient">Ödeme Yapılan</th>
+                  <th class="py-3 px-3" data-i18n="th_type">Tür</th>
+                  <th class="py-3 px-3" data-i18n="th_recipient">Kişi / Kurum</th>
                   <th class="py-3 px-3" data-i18n="th_category">Kategori</th>
                   <th class="py-3 px-3" data-i18n="th_method">Yöntem</th>
                   <th class="py-3 px-3" data-i18n="th_amount">Tutar</th>
@@ -619,7 +661,7 @@
               </thead>
               <tbody id="paymentsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
                 <tr>
-                  <td colspan="7" class="text-center py-6 text-slate-400" data-i18n="payments_table_loading">Ödemeler yükleniyor...</td>
+                  <td colspan="8" class="text-center py-6 text-slate-400" data-i18n="payments_table_loading">Ödemeler yükleniyor...</td>
                 </tr>
               </tbody>
             </table>
@@ -655,8 +697,8 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_workplace_req">Çalışma Yeri / Şantiye *</label>
-          <input type="text" id="modalWorkplace" required placeholder="Çalışma yeri / şantiye" data-i18n-placeholder="modal_workplace_placeholder" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_workplace_req">Çalışma Yeri / Şantiye (Opsiyonel)</label>
+          <input type="text" id="modalWorkplace" placeholder="Çalışma yeri / şantiye (opsiyonel)" data-i18n-placeholder="modal_workplace_placeholder" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -208,7 +208,7 @@ function setActiveShiftState(shift) {
   if (alertBanner) alertBanner.classList.remove('hidden');
 
   const summaryText = document.getElementById('activeEmployeeSummaryText');
-  if (summaryText) summaryText.textContent = `${shift.employee_name} (${shift.workplace})`;
+  if (summaryText) summaryText.textContent = `${shift.employee_name}${shift.workplace ? ` (${shift.workplace})` : ''}`;
 
   const entryDisplay = document.getElementById('activeEntryTimeDisplay');
   if (entryDisplay) {
@@ -387,6 +387,7 @@ async function handleStartShift() {
       body: JSON.stringify({
         employee_name,
         workplace,
+        department: workplace,
         latitude: coords.latitude,
         longitude: coords.longitude
       })
@@ -412,7 +413,7 @@ async function handleStartShift() {
         html: `
           <p class="text-sm text-slate-300 mb-2">${t('swal_welcome_prefix')}<strong>${result.shift.employee_name}</strong>!</p>
           <div class="p-3 bg-slate-800/80 rounded-xl text-xs text-slate-300 text-left space-y-2 border border-slate-700">
-            <div><strong class="text-indigo-300">${t('swal_place')}</strong> ${result.shift.workplace}</div>
+            ${result.shift.workplace ? `<div><strong class="text-indigo-400">${t('swal_place')}</strong> ${result.shift.workplace}</div>` : ''}
             <div><strong class="text-emerald-400">${t('swal_entry_time')}</strong> ${entryTimeFormatted}</div>
             ${locationNote}
             <div class="text-slate-400 font-medium">${t('swal_timer_started')}</div>
@@ -486,7 +487,6 @@ async function handleEndShift() {
       <div class="text-left space-y-3 mb-2 text-xs sm:text-sm">
         <p class="text-slate-300"><strong>${activeShift.employee_name}</strong> ${t('swal_checkout_confirm_msg')}</p>
         <div class="p-3 bg-slate-800 rounded-xl space-y-1.5 border border-slate-700 text-xs">
-          <div><strong class="text-slate-400">${t('swal_place')}</strong> ${activeShift.workplace}</div>
           <div><strong class="text-slate-400">${t('swal_entry_time')}</strong> ${entryTimeDisplayStr}</div>
           <div><strong class="text-emerald-400">${t('swal_elapsed_time')}</strong> <span class="font-mono font-bold text-emerald-300">${currentDurationText}</span></div>
         </div>
@@ -526,11 +526,20 @@ async function handleEndShift() {
     <span>${t('portal_btn_checking_out')}</span>
   `;
 
+  // Otomatik GPS Çıkış Konumunu Al
+  const coords = await getCurrentCoordinates();
+
   try {
     const res = await fetch(`/api/shifts/${activeShift.id}/end`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: notesToSend })
+      body: JSON.stringify({
+        notes: notesToSend,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        checkout_latitude: coords.latitude,
+        checkout_longitude: coords.longitude
+      })
     });
 
     const result = await res.json();
@@ -545,6 +554,17 @@ async function handleEndShift() {
         ? i18n.formatDurationI18n(result.shift.duration_minutes) 
         : result.shift.durationFormatted;
 
+      const hasEntryGps = result.shift.entry_latitude && result.shift.entry_longitude;
+      const hasExitGps = result.shift.checkout_latitude && result.shift.checkout_longitude;
+
+      const entryGpsHtml = hasEntryGps
+        ? `<div class="text-indigo-300 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline"></i> <span><strong>${t('th_location_entry')}:</strong> ${t('swal_gps_success')}</span></div>`
+        : `<div class="text-slate-400 flex items-center gap-1.5"><i data-lucide="map-pin-off" class="w-3.5 h-3.5 inline"></i> <span><strong>${t('th_location_entry')}:</strong> ${t('swal_gps_fail')}</span></div>`;
+
+      const exitGpsHtml = hasExitGps
+        ? `<div class="text-emerald-400 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline"></i> <span><strong>${t('th_location_exit')}:</strong> ${t('swal_checkout_gps_success')}</span></div>`
+        : `<div class="text-amber-400 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5 inline"></i> <span><strong>${t('th_location_exit')}:</strong> ${t('swal_checkout_gps_fail')}</span></div>`;
+
       Swal.fire({
         icon: 'success',
         title: t('swal_checkout_success_title'),
@@ -552,16 +572,16 @@ async function handleEndShift() {
           <p class="text-sm text-slate-300 mb-3">${t('swal_checkout_success_msg', result.shift.employee_name)}</p>
           <div class="p-4 bg-slate-800/90 rounded-xl text-xs text-slate-200 text-left space-y-2 border border-slate-700">
             <div class="flex justify-between">
-              <span class="text-slate-400">${t('swal_place')}</span>
-              <strong class="text-white">${result.shift.workplace}</strong>
-            </div>
-            <div class="flex justify-between">
               <span class="text-slate-400">${t('swal_entry_time')}</span>
               <span>${entryTimeLocale}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-slate-400">${t('th_exit_time')}:</span>
               <span>${exitTimeLocale}</span>
+            </div>
+            <div class="pt-2 border-t border-slate-700/80 space-y-1.5">
+              ${entryGpsHtml}
+              ${exitGpsHtml}
             </div>
             <div class="pt-2 border-t border-slate-700 flex justify-between items-center">
               <span class="text-slate-300 font-semibold">${t('swal_total_work_time')}</span>

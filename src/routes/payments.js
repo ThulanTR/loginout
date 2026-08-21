@@ -16,7 +16,7 @@ function formatCurrency(amount) {
 // Yönetici: Tüm Ödeme Kayıtlarını Listele ve Filtrele (GET /api/payments)
 router.get('/', authenticateToken, (req, res) => {
   try {
-    const { search, category, method, startDate, endDate } = req.query;
+    const { search, category, method, startDate, endDate, type } = req.query;
 
     let query = 'SELECT * FROM payments WHERE 1=1';
     const params = [];
@@ -24,6 +24,11 @@ router.get('/', authenticateToken, (req, res) => {
     if (search && search.trim() !== '') {
       query += ' AND (recipient LIKE ? OR notes LIKE ?)';
       params.push(`%${search.trim()}%`, `%${search.trim()}%`);
+    }
+
+    if (type && (type === 'income' || type === 'expense')) {
+      query += ' AND type = ?';
+      params.push(type);
     }
 
     if (category && category.trim() !== '') {
@@ -52,11 +57,29 @@ router.get('/', authenticateToken, (req, res) => {
     const rows = stmt.all(...params);
 
     // Zenginleştirilmiş satırlar ve toplamlar
-    const enrichedRows = rows.map(row => ({
-      ...row,
-      amountFormatted: formatCurrency(row.amount)
-    }));
+    const enrichedRows = rows.map(row => {
+      const itemType = row.type === 'income' ? 'income' : 'expense';
+      return {
+        ...row,
+        type: itemType,
+        isIncome: itemType === 'income',
+        amountFormatted: formatCurrency(row.amount)
+      };
+    });
 
+    // Toplam Gelir ve Gider Hesaplama
+    let totalIncome = 0;
+    let totalExpense = 0;
+    rows.forEach(r => {
+      const amt = Number(r.amount) || 0;
+      if (r.type === 'income') {
+        totalIncome += amt;
+      } else {
+        totalExpense += amt;
+      }
+    });
+
+    const netBalance = totalIncome - totalExpense;
     const totalAmount = rows.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
     // Kategori bazlı toplamlar
@@ -69,6 +92,12 @@ router.get('/', authenticateToken, (req, res) => {
       success: true,
       data: enrichedRows,
       count: enrichedRows.length,
+      totalIncome,
+      totalIncomeFormatted: formatCurrency(totalIncome),
+      totalExpense,
+      totalExpenseFormatted: formatCurrency(totalExpense),
+      netBalance,
+      netBalanceFormatted: formatCurrency(netBalance),
       totalAmount,
       totalAmountFormatted: formatCurrency(totalAmount),
       categoryTotals
@@ -81,12 +110,12 @@ router.get('/', authenticateToken, (req, res) => {
 
 // Yönetici: Yeni Ödeme Kaydı Ekle (POST /api/payments)
 router.post('/', authenticateToken, (req, res) => {
-  const { payment_date, amount, recipient, category, payment_method, notes } = req.body;
+  const { payment_date, amount, recipient, category, payment_method, notes, type } = req.body;
 
   if (!payment_date || amount === undefined || amount === null || !recipient || !category) {
     return res.status(400).json({
       success: false,
-      message: 'Tarih, tutar, ödeme yapan ve kategori alanları zorunludur.'
+      message: 'Tarih, tutar, kişi/kurum ve kategori alanları zorunludur.'
     });
   }
 
@@ -98,13 +127,16 @@ router.post('/', authenticateToken, (req, res) => {
     });
   }
 
+  const paymentType = (type === 'income') ? 'income' : 'expense';
+
   try {
     const stmt = db.prepare(`
-      INSERT INTO payments (payment_date, amount, recipient, category, payment_method, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      INSERT INTO payments (type, payment_date, amount, recipient, category, payment_method, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     `);
 
     const result = stmt.run(
+      paymentType,
       payment_date.trim(),
       parsedAmount,
       recipient.trim(),
@@ -115,8 +147,9 @@ router.post('/', authenticateToken, (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Ödeme kaydı başarıyla oluşturuldu.',
+      message: paymentType === 'income' ? 'Gelir (Alınan ödeme) kaydı başarıyla oluşturuldu.' : 'Gider (Yapılan ödeme) kaydı başarıyla oluşturuldu.',
       paymentId: result.lastInsertRowid,
+      type: paymentType,
       amountFormatted: formatCurrency(parsedAmount)
     });
   } catch (error) {
@@ -131,7 +164,7 @@ router.post('/', authenticateToken, (req, res) => {
 // Yönetici: Ödeme Kaydı Güncelle (PUT /api/payments/:id)
 router.put('/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { payment_date, amount, recipient, category, payment_method, notes } = req.body;
+  const { payment_date, amount, recipient, category, payment_method, notes, type } = req.body;
 
   if (!payment_date || amount === undefined || !recipient || !category) {
     return res.status(400).json({
@@ -148,14 +181,18 @@ router.put('/:id', authenticateToken, (req, res) => {
     });
   }
 
+  const existing = db.prepare('SELECT type FROM payments WHERE id = ?').get(id);
+  const paymentType = type ? (type === 'income' ? 'income' : 'expense') : (existing ? (existing.type || 'expense') : 'expense');
+
   try {
     const stmt = db.prepare(`
       UPDATE payments
-      SET payment_date = ?, amount = ?, recipient = ?, category = ?, payment_method = ?, notes = ?
+      SET type = ?, payment_date = ?, amount = ?, recipient = ?, category = ?, payment_method = ?, notes = ?
       WHERE id = ?
     `);
 
     const result = stmt.run(
+      paymentType,
       payment_date.trim(),
       parsedAmount,
       recipient.trim(),

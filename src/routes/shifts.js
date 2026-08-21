@@ -52,18 +52,18 @@ router.get('/suggestions', (req, res) => {
 
 // 1. YENİ İŞ AKIŞI: Vardiyayı Başlat / Giriş Yap (POST /api/shifts/start)
 router.post('/start', (req, res) => {
-  const { employee_name, workplace, work_location, latitude, longitude, entry_latitude, entry_longitude } = req.body;
-  const targetWorkplace = workplace || work_location;
+  const { employee_name, workplace, work_location, department, latitude, longitude, entry_latitude, entry_longitude } = req.body;
+  const targetWorkplace = workplace || work_location || department || '';
 
-  if (!employee_name || !targetWorkplace || employee_name.trim() === '' || targetWorkplace.trim() === '') {
+  if (!employee_name || employee_name.trim() === '') {
     return res.status(400).json({
       success: false,
-      message: 'Çalışan adı ve çalışma yeri alanları zorunludur.'
+      message: 'Çalışan adı alanı zorunludur.'
     });
   }
 
   const cleanName = employee_name.trim();
-  const cleanPlace = targetWorkplace.trim();
+  const cleanPlace = targetWorkplace ? targetWorkplace.trim() : '';
 
   // GPS Konum ayrıştırma (varsa float, yoksa null)
   const latVal = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude)))
@@ -91,7 +91,7 @@ router.post('/start', (req, res) => {
         shift: {
           id: existingActive.id,
           employee_name: existingActive.employee_name,
-          workplace: existingActive.workplace,
+          workplace: existingActive.workplace || '',
           entry_time: existingActive.entry_time,
           entry_latitude: existingActive.entry_latitude,
           entry_longitude: existingActive.entry_longitude,
@@ -134,13 +134,22 @@ router.post('/start', (req, res) => {
   }
 });
 
-// 2. YENİ İŞ AKIŞI: Vardiyayı Bitir / Çıkış Yap (PUT /api/shifts/:id/end)
-router.put('/:id/end', (req, res) => {
-  const { id } = req.params;
-  const { notes } = req.body;
+// 2. YENİ İŞ AKIŞI: Vardiyayı Bitir / Çıkış Yap (PUT /api/shifts/:id/end & POST /api/shifts/end)
+function handleShiftTermination(req, res, targetId) {
+  const id = targetId || req.params.id || req.body.id || req.body.shiftId;
+  const { notes, latitude, longitude, checkout_latitude, checkout_longitude, checkout_location_name, employee_name } = req.body;
 
   try {
-    const shift = db.prepare('SELECT * FROM shifts WHERE id = ?').get(id);
+    let shift = null;
+    if (id) {
+      shift = db.prepare('SELECT * FROM shifts WHERE id = ?').get(id);
+    } else if (employee_name && employee_name.trim() !== '') {
+      shift = db.prepare(`
+        SELECT * FROM shifts 
+        WHERE employee_name = ? AND (status = 'active' OR exit_time IS NULL)
+        ORDER BY id DESC LIMIT 1
+      `).get(employee_name.trim());
+    }
 
     if (!shift) {
       return res.status(404).json({
@@ -148,6 +157,17 @@ router.put('/:id/end', (req, res) => {
         message: 'Açık vardiya kaydı bulunamadı.'
       });
     }
+
+    // GPS Çıkış Konum ayrıştırma (varsa float, yoksa null)
+    const checkoutLatVal = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude)))
+      ? parseFloat(latitude)
+      : (checkout_latitude !== undefined && checkout_latitude !== null && !isNaN(parseFloat(checkout_latitude)) ? parseFloat(checkout_latitude) : null);
+
+    const checkoutLngVal = (longitude !== undefined && longitude !== null && !isNaN(parseFloat(longitude)))
+      ? parseFloat(longitude)
+      : (checkout_longitude !== undefined && checkout_longitude !== null && !isNaN(parseFloat(checkout_longitude)) ? parseFloat(checkout_longitude) : null);
+
+    const checkoutLocName = (checkout_location_name && checkout_location_name.trim() !== '') ? checkout_location_name.trim() : null;
 
     // Eğer zaten tamamlanmışsa
     if (shift.status === 'completed' && shift.exit_time) {
@@ -169,18 +189,24 @@ router.put('/:id/end', (req, res) => {
 
     const updateStmt = db.prepare(`
       UPDATE shifts
-      SET exit_time = ?, duration_minutes = ?, status = 'completed', notes = ?
+      SET exit_time = ?, duration_minutes = ?, status = 'completed', notes = ?,
+          checkout_latitude = ?, checkout_longitude = ?, checkout_location_name = ?
       WHERE id = ?
     `);
 
-    updateStmt.run(exit_time, durationMinutes, finalNotes, id);
+    updateStmt.run(exit_time, durationMinutes, finalNotes, checkoutLatVal, checkoutLngVal, checkoutLocName, shift.id);
 
     const updatedShift = {
       id: shift.id,
       employee_name: shift.employee_name,
       workplace: shift.workplace,
       entry_time: shift.entry_time,
+      entry_latitude: shift.entry_latitude,
+      entry_longitude: shift.entry_longitude,
       exit_time,
+      checkout_latitude: checkoutLatVal,
+      checkout_longitude: checkoutLngVal,
+      checkout_location_name: checkoutLocName,
       duration_minutes: durationMinutes,
       durationFormatted: formatDuration(durationMinutes),
       notes: finalNotes,
@@ -199,7 +225,11 @@ router.put('/:id/end', (req, res) => {
       message: 'Vardiya sonlandırılırken sunucu hatası oluştu.'
     });
   }
-});
+}
+
+router.put('/:id/end', (req, res) => handleShiftTermination(req, res, req.params.id));
+router.post('/:id/end', (req, res) => handleShiftTermination(req, res, req.params.id));
+router.post('/end', (req, res) => handleShiftTermination(req, res));
 
 // 3. AKTİF VARDİYA SORGULAMA (Sayfa Yenileme ve Doğrulama - GET /api/shifts/active)
 router.get('/active', (req, res) => {
@@ -247,14 +277,20 @@ router.get('/active', (req, res) => {
 
 // Geriye Dönük / Genel Vardiya Kaydetme (POST /api/shifts)
 router.post('/', (req, res) => {
-  const { employee_name, workplace, entry_time, exit_time, notes, entry_latitude, entry_longitude, latitude, longitude } = req.body;
+  const {
+    employee_name, workplace, entry_time, exit_time, notes,
+    entry_latitude, entry_longitude, latitude, longitude,
+    checkout_latitude, checkout_longitude, checkout_location_name
+  } = req.body;
 
-  if (!employee_name || !workplace || !entry_time) {
+  if (!employee_name || !entry_time) {
     return res.status(400).json({
       success: false,
-      message: 'Çalışan adı, çalışma yeri ve giriş saati zorunludur.'
+      message: 'Çalışan adı ve giriş saati zorunludur.'
     });
   }
+
+  const cleanPlace = (workplace && workplace.trim()) ? workplace.trim() : '';
 
   const latVal = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude)))
     ? parseFloat(latitude)
@@ -263,6 +299,14 @@ router.post('/', (req, res) => {
   const lngVal = (longitude !== undefined && longitude !== null && !isNaN(parseFloat(longitude)))
     ? parseFloat(longitude)
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
+
+  const outLatVal = (checkout_latitude !== undefined && checkout_latitude !== null && !isNaN(parseFloat(checkout_latitude)))
+    ? parseFloat(checkout_latitude) : null;
+
+  const outLngVal = (checkout_longitude !== undefined && checkout_longitude !== null && !isNaN(parseFloat(checkout_longitude)))
+    ? parseFloat(checkout_longitude) : null;
+
+  const outLocName = (checkout_location_name && checkout_location_name.trim() !== '') ? checkout_location_name.trim() : null;
 
   try {
     const normalizedEntry = toIsoDateTime(entry_time);
@@ -274,20 +318,23 @@ router.post('/', (req, res) => {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, checkout_latitude, checkout_longitude, checkout_location_name, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     `);
 
     const result = stmt.run(
       employee_name.trim(),
-      workplace.trim(),
+      cleanPlace,
       normalizedEntry,
       normalizedExit || null,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal
+      lngVal,
+      outLatVal,
+      outLngVal,
+      outLocName
     );
 
     res.status(201).json({
@@ -346,12 +393,21 @@ router.get('/', authenticateToken, (req, res) => {
     // Süreleri, durumları ve konum linklerini zenginleştir
     const enrichedRows = rows.map(row => {
       const isActive = row.status === 'active' || !row.exit_time;
-      const hasLocation = row.entry_latitude !== null && row.entry_longitude !== null && !isNaN(row.entry_latitude) && !isNaN(row.entry_longitude);
+      const hasEntryLocation = row.entry_latitude !== null && row.entry_latitude !== undefined && row.entry_longitude !== null && row.entry_longitude !== undefined && !isNaN(row.entry_latitude) && !isNaN(row.entry_longitude);
+      const hasCheckoutLocation = row.checkout_latitude !== null && row.checkout_latitude !== undefined && row.checkout_longitude !== null && row.checkout_longitude !== undefined && !isNaN(row.checkout_latitude) && !isNaN(row.checkout_longitude);
+
+      const entryMapUrl = hasEntryLocation ? `https://www.google.com/maps?q=${row.entry_latitude},${row.entry_longitude}` : null;
+      const checkoutMapUrl = hasCheckoutLocation ? `https://www.google.com/maps?q=${row.checkout_latitude},${row.checkout_longitude}` : null;
+
       return {
         ...row,
         status: isActive ? 'active' : 'completed',
-        hasLocation,
-        mapUrl: hasLocation ? `https://www.google.com/maps?q=${row.entry_latitude},${row.entry_longitude}` : null,
+        hasLocation: hasEntryLocation || hasCheckoutLocation,
+        hasEntryLocation,
+        hasCheckoutLocation,
+        entryMapUrl,
+        checkoutMapUrl,
+        mapUrl: entryMapUrl || checkoutMapUrl,
         durationFormatted: isActive ? 'Devam Ediyor' : formatDuration(row.duration_minutes)
       };
     });
@@ -375,14 +431,20 @@ router.get('/', authenticateToken, (req, res) => {
 
 // Yönetici: Manuel Giriş-Çıkış Ekleme (POST /api/shifts/admin)
 router.post('/admin', authenticateToken, (req, res) => {
-  const { employee_name, workplace, entry_time, exit_time, notes, entry_latitude, entry_longitude, latitude, longitude } = req.body;
+  const {
+    employee_name, workplace, entry_time, exit_time, notes,
+    entry_latitude, entry_longitude, latitude, longitude,
+    checkout_latitude, checkout_longitude, checkout_location_name
+  } = req.body;
 
-  if (!employee_name || !workplace || !entry_time) {
+  if (!employee_name || !entry_time) {
     return res.status(400).json({
       success: false,
-      message: 'Lütfen zorunlu alanları doldurunuz.'
+      message: 'Lütfen çalışan adı ve giriş saatini doldurunuz.'
     });
   }
+
+  const cleanPlace = (workplace && workplace.trim()) ? workplace.trim() : '';
 
   const latVal = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude)))
     ? parseFloat(latitude)
@@ -392,6 +454,14 @@ router.post('/admin', authenticateToken, (req, res) => {
     ? parseFloat(longitude)
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
+  const outLatVal = (checkout_latitude !== undefined && checkout_latitude !== null && !isNaN(parseFloat(checkout_latitude)))
+    ? parseFloat(checkout_latitude) : null;
+
+  const outLngVal = (checkout_longitude !== undefined && checkout_longitude !== null && !isNaN(parseFloat(checkout_longitude)))
+    ? parseFloat(checkout_longitude) : null;
+
+  const outLocName = (checkout_location_name && checkout_location_name.trim() !== '') ? checkout_location_name.trim() : null;
+
   try {
     const normalizedEntry = toIsoDateTime(entry_time);
     const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
@@ -399,20 +469,23 @@ router.post('/admin', authenticateToken, (req, res) => {
     const status = normalizedExit ? 'completed' : 'active';
 
     const stmt = db.prepare(`
-      INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+      INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, entry_latitude, entry_longitude, checkout_latitude, checkout_longitude, checkout_location_name, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     `);
 
     const result = stmt.run(
       employee_name.trim(),
-      workplace.trim(),
+      cleanPlace,
       normalizedEntry,
       normalizedExit || null,
       durationMinutes,
       status,
       notes ? notes.trim() : null,
       latVal,
-      lngVal
+      lngVal,
+      outLatVal,
+      outLngVal,
+      outLocName
     );
 
     res.status(201).json({
@@ -429,12 +502,16 @@ router.post('/admin', authenticateToken, (req, res) => {
 // Yönetici: Giriş-Çıkış Kaydını Güncelle (PUT /api/shifts/:id)
 router.put('/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { employee_name, workplace, entry_time, exit_time, notes, entry_latitude, entry_longitude } = req.body;
+  const {
+    employee_name, workplace, entry_time, exit_time, notes,
+    entry_latitude, entry_longitude,
+    checkout_latitude, checkout_longitude, checkout_location_name
+  } = req.body;
 
-  if (!employee_name || !workplace || !entry_time) {
+  if (!employee_name || !entry_time) {
     return res.status(400).json({
       success: false,
-      message: 'Lütfen zorunlu alanları doldurunuz.'
+      message: 'Lütfen çalışan adı ve giriş saatini doldurunuz.'
     });
   }
 
@@ -445,19 +522,25 @@ router.put('/:id', authenticateToken, (req, res) => {
     const status = normalizedExit ? 'completed' : 'active';
 
     // Mevcut kaydı çek ki konum üzerine yazılmasın (eğer gönderilmemişse)
-    const existing = db.prepare('SELECT entry_latitude, entry_longitude FROM shifts WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT entry_latitude, entry_longitude, checkout_latitude, checkout_longitude, checkout_location_name, workplace FROM shifts WHERE id = ?').get(id);
+    const cleanPlace = workplace !== undefined ? (workplace ? workplace.trim() : '') : (existing ? (existing.workplace || '') : '');
     const finalLat = entry_latitude !== undefined ? entry_latitude : (existing ? existing.entry_latitude : null);
     const finalLng = entry_longitude !== undefined ? entry_longitude : (existing ? existing.entry_longitude : null);
+    const finalOutLat = checkout_latitude !== undefined ? checkout_latitude : (existing ? existing.checkout_latitude : null);
+    const finalOutLng = checkout_longitude !== undefined ? checkout_longitude : (existing ? existing.checkout_longitude : null);
+    const finalOutLoc = checkout_location_name !== undefined ? checkout_location_name : (existing ? existing.checkout_location_name : null);
 
     const stmt = db.prepare(`
       UPDATE shifts
-      SET employee_name = ?, workplace = ?, entry_time = ?, exit_time = ?, duration_minutes = ?, status = ?, notes = ?, entry_latitude = ?, entry_longitude = ?
+      SET employee_name = ?, workplace = ?, entry_time = ?, exit_time = ?, duration_minutes = ?, status = ?, notes = ?,
+          entry_latitude = ?, entry_longitude = ?,
+          checkout_latitude = ?, checkout_longitude = ?, checkout_location_name = ?
       WHERE id = ?
     `);
 
     const result = stmt.run(
       employee_name.trim(),
-      workplace.trim(),
+      cleanPlace,
       normalizedEntry,
       normalizedExit || null,
       durationMinutes,
@@ -465,6 +548,9 @@ router.put('/:id', authenticateToken, (req, res) => {
       notes ? notes.trim() : null,
       finalLat,
       finalLng,
+      finalOutLat,
+      finalOutLng,
+      finalOutLoc,
       id
     );
 

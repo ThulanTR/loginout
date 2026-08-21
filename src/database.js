@@ -33,7 +33,7 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS shifts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       employee_name TEXT NOT NULL,
-      workplace TEXT NOT NULL,
+      workplace TEXT DEFAULT '',
       entry_time TEXT NOT NULL,
       exit_time TEXT,
       duration_minutes INTEGER DEFAULT 0,
@@ -41,12 +41,16 @@ function initDatabase() {
       notes TEXT,
       entry_latitude REAL,
       entry_longitude REAL,
+      checkout_latitude REAL,
+      checkout_longitude REAL,
+      checkout_location_name TEXT,
       created_at TEXT DEFAULT (datetime('now', 'localtime'))
     );
 
-    -- Finans ve Ödemeler Tablosu
+    -- Finans ve Ödemeler Tablosu (Gelir & Gider)
     CREATE TABLE IF NOT EXISTS payments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL DEFAULT 'expense',
       payment_date TEXT NOT NULL,
       amount REAL NOT NULL,
       recipient TEXT NOT NULL,
@@ -86,6 +90,32 @@ function initDatabase() {
     if (!hasLng) {
       db.exec("ALTER TABLE shifts ADD COLUMN entry_longitude REAL");
       console.log('✅ shifts tablosuna entry_longitude kolonu eklendi.');
+    }
+
+    const hasCheckoutLat = shiftCols.some(c => c.name === 'checkout_latitude');
+    if (!hasCheckoutLat) {
+      db.exec("ALTER TABLE shifts ADD COLUMN checkout_latitude REAL");
+      console.log('✅ shifts tablosuna checkout_latitude kolonu eklendi.');
+    }
+
+    const hasCheckoutLng = shiftCols.some(c => c.name === 'checkout_longitude');
+    if (!hasCheckoutLng) {
+      db.exec("ALTER TABLE shifts ADD COLUMN checkout_longitude REAL");
+      console.log('✅ shifts tablosuna checkout_longitude kolonu eklendi.');
+    }
+
+    const hasCheckoutLocName = shiftCols.some(c => c.name === 'checkout_location_name');
+    if (!hasCheckoutLocName) {
+      db.exec("ALTER TABLE shifts ADD COLUMN checkout_location_name TEXT");
+      console.log('✅ shifts tablosuna checkout_location_name kolonu eklendi.');
+    }
+
+    // payments tablosu type kolonu kontrolü
+    const paymentCols = db.prepare("PRAGMA table_info(payments)").all();
+    const hasPaymentType = paymentCols.some(c => c.name === 'type');
+    if (!hasPaymentType) {
+      db.exec("ALTER TABLE payments ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'");
+      console.log('✅ payments tablosuna type kolonu (income/expense) eklendi.');
     }
 
     // Aktif vardiyalarda saat dilimi (UTC ISO) düzeltmesi (Railway / Localhost uyumu)

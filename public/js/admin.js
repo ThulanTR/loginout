@@ -201,14 +201,27 @@ async function loadDashboardData() {
     // 1. Metrik Kartlarını Doldur
     const { stats, weeklyChart, categoryChart, timeline } = data;
 
-    document.getElementById('statTotalShifts').textContent = stats.totalShifts;
-    document.getElementById('statTodayActive').textContent = stats.todayActiveCount;
-    document.getElementById('statTotalPayments').textContent = stats.totalPaymentsFormatted;
-    document.getElementById('statThisMonthPayments').textContent = stats.thisMonthPaymentsFormatted;
+    const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
+    const hoursUnit = isTr ? 'Saat' : 'Hours';
+
+    const statShiftsEl = document.getElementById('statTotalShifts');
+    if (statShiftsEl) statShiftsEl.textContent = stats.total_shifts ?? stats.totalShifts ?? 0;
+
+    const statHoursEl = document.getElementById('statTotalHours');
+    if (statHoursEl) {
+      const hoursVal = stats.total_hours ?? stats.totalWorkHours ?? 0;
+      statHoursEl.textContent = `${hoursVal} ${hoursUnit}`;
+    }
+
+    const statIncomeEl = document.getElementById('statTotalIncome') || document.getElementById('statTotalPayments');
+    if (statIncomeEl) statIncomeEl.textContent = stats.total_income_formatted ?? stats.totalIncomeFormatted ?? 'CAD$ 0.00';
+
+    const statExpenseEl = document.getElementById('statTotalExpense') || document.getElementById('statThisMonthPayments');
+    if (statExpenseEl) statExpenseEl.textContent = stats.total_expense_formatted ?? stats.totalExpenseFormatted ?? 'CAD$ 0.00';
 
     // Rozetleri güncelle
     const tabShiftsBadge = document.getElementById('tabShiftsBadge');
-    if (tabShiftsBadge) tabShiftsBadge.textContent = stats.totalShifts;
+    if (tabShiftsBadge) tabShiftsBadge.textContent = stats.total_shifts ?? stats.totalShifts ?? 0;
 
     // 2. Haftalık Çalışma Çubuk Grafiği
     renderWeeklyChart(weeklyChart);
@@ -425,13 +438,11 @@ async function loadShifts() {
   if (!checkAuth()) return;
 
   const search = document.getElementById('shiftSearchInput')?.value || '';
-  const workplace = document.getElementById('shiftWorkplaceFilter')?.value || '';
   const startDate = document.getElementById('shiftStartDate')?.value || '';
   const endDate = document.getElementById('shiftEndDate')?.value || '';
 
   const params = new URLSearchParams();
   if (search) params.append('search', search);
-  if (workplace) params.append('workplace', workplace);
   if (startDate) params.append('startDate', startDate);
   if (endDate) params.append('endDate', endDate);
 
@@ -454,28 +465,12 @@ async function loadShifts() {
 
     document.getElementById('shiftTotalHoursText').textContent = `${data.totalHours} ${t('stat_hours_unit')} (${formattedDuration})`;
 
-    // Şantiye filtresini doldur
-    populateWorkplaceFilter(currentShiftsData);
-
     // Tabloyu render et
     renderShiftsTable(currentShiftsData);
     refreshIcons();
   } catch (err) {
     console.error('Vardiyalar yüklenirken hata:', err);
   }
-}
-
-function populateWorkplaceFilter(shifts) {
-  const filterSelect = document.getElementById('shiftWorkplaceFilter');
-  if (!filterSelect || filterSelect.options.length > 1) return;
-
-  const places = [...new Set(shifts.map(s => s.workplace).filter(Boolean))];
-  places.forEach(place => {
-    const opt = document.createElement('option');
-    opt.value = place;
-    opt.textContent = place;
-    filterSelect.appendChild(opt);
-  });
 }
 
 function renderShiftsTable(shifts) {
@@ -512,14 +507,36 @@ function renderShiftsTable(shifts) {
       ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block"></span> ${t('badge_in_progress')}</span>`
       : `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${shift.duration_minutes > 0 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'} whitespace-nowrap">${formattedDuration}</span>`;
 
-    // GPS Harita Bağlantısı
-    const hasLocation = shift.entry_latitude !== null && shift.entry_latitude !== undefined && shift.entry_longitude !== null && shift.entry_longitude !== undefined && !isNaN(shift.entry_latitude) && !isNaN(shift.entry_longitude);
-    const locationBadge = hasLocation
-      ? `<a href="https://www.google.com/maps?q=${shift.entry_latitude},${shift.entry_longitude}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 hover:text-indigo-200 border border-indigo-500/30 text-xs transition font-medium" title="Google Maps (${Number(shift.entry_latitude).toFixed(4)}, ${Number(shift.entry_longitude).toFixed(4)})">
-          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span>${t('btn_view_map')}</span>
+    // Kompakt Yan Yana GPS Giriş & Çıkış Rozetleri
+    const hasEntryLocation = shift.entry_latitude !== null && shift.entry_latitude !== undefined && shift.entry_longitude !== null && shift.entry_longitude !== undefined && !isNaN(shift.entry_latitude) && !isNaN(shift.entry_longitude);
+    const hasCheckoutLocation = shift.checkout_latitude !== null && shift.checkout_latitude !== undefined && shift.checkout_longitude !== null && shift.checkout_longitude !== undefined && !isNaN(shift.checkout_latitude) && !isNaN(shift.checkout_longitude);
+
+    const entryBadge = hasEntryLocation
+      ? `<a href="https://www.google.com/maps?q=${shift.entry_latitude},${shift.entry_longitude}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 hover:text-indigo-100 border border-indigo-500/30 text-xs transition font-medium whitespace-nowrap" title="${t('th_location_entry')} (${Number(shift.entry_latitude).toFixed(4)}, ${Number(shift.entry_longitude).toFixed(4)})">
+          <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400"></i>
+          <span>${t('badge_entry_map')}</span>
         </a>`
-      : `<span class="text-slate-600 font-mono text-xs">-</span>`;
+      : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/40 text-slate-500 border border-slate-700/40 text-xs whitespace-nowrap opacity-60" title="${t('th_location_entry')}: -">
+          <i data-lucide="map-pin-off" class="w-3 h-3 text-slate-600"></i>
+          <span>${t('badge_entry_map')}</span>
+        </span>`;
+
+    const checkoutBadge = hasCheckoutLocation
+      ? `<a href="https://www.google.com/maps?q=${shift.checkout_latitude},${shift.checkout_longitude}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-100 border border-emerald-500/30 text-xs transition font-medium whitespace-nowrap" title="${t('th_location_exit')} (${Number(shift.checkout_latitude).toFixed(4)}, ${Number(shift.checkout_longitude).toFixed(4)})">
+          <i data-lucide="map-pin" class="w-3 h-3 text-emerald-400"></i>
+          <span>${t('badge_exit_map')}</span>
+        </a>`
+      : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/40 text-slate-500 border border-slate-700/40 text-xs whitespace-nowrap opacity-60" title="${t('th_location_exit')}: ${t('badge_no_location')}">
+          <i data-lucide="map-pin-off" class="w-3 h-3 text-slate-600"></i>
+          <span>${t('badge_exit_map')}</span>
+        </span>`;
+
+    const locationBadges = `
+      <div class="flex items-center gap-1.5 whitespace-nowrap">
+        ${entryBadge}
+        ${checkoutBadge}
+      </div>
+    `;
 
     return `
       <tr class="hover:bg-slate-900/40 transition">
@@ -539,15 +556,13 @@ function renderShiftsTable(shifts) {
         </td>
 
         <!-- Çalışma Yeri -->
-        <td class="py-3.5 px-4">
-          <span class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-300 whitespace-nowrap">
-            ${shift.workplace}
-          </span>
+        <td class="py-3.5 px-4 font-mono text-slate-300 whitespace-nowrap">
+          ${shift.workplace || '<span class="text-slate-600">-</span>'}
         </td>
 
-        <!-- Konum (GPS) -->
+        <!-- Konum (Giriş / Çıkış GPS Kompakt) -->
         <td class="py-3.5 px-4 whitespace-nowrap">
-          ${locationBadge}
+          ${locationBadges}
         </td>
 
         <!-- Giriş Saati -->
@@ -668,17 +683,19 @@ function closeShiftModal() {
 }
 
 // ==========================================
-// 4. FİNANS VE ÖDEME YÖNETİMİ
+// 4. FİNANS VE ÖDEME YÖNETİMİ (GELİR & GİDER)
 // ==========================================
 async function loadPayments() {
   if (!checkAuth()) return;
 
   const search = document.getElementById('paymentSearchInput')?.value || '';
+  const type = document.getElementById('paymentTypeFilter')?.value || '';
   const category = document.getElementById('paymentCategoryFilter')?.value || '';
   const method = document.getElementById('paymentMethodFilter')?.value || '';
 
   const params = new URLSearchParams();
   if (search) params.append('search', search);
+  if (type) params.append('type', type);
   if (category) params.append('category', category);
   if (method) params.append('method', method);
 
@@ -692,16 +709,22 @@ async function loadPayments() {
 
     currentPaymentsData = data.data || [];
 
-    // Özet kartlarını güncelle
-    document.getElementById('financeSummaryTotal').textContent = data.totalAmountFormatted;
-    document.getElementById('financeSummaryCount').textContent = `${data.count} ${t('transactions_count_suffix')}`;
+    // Finansal Özet Kartlarını Güncelle
+    const incomeEl = document.getElementById('financeSummaryTotalIncome') || document.getElementById('financeSummaryTotal');
+    if (incomeEl) incomeEl.textContent = data.totalIncomeFormatted || 'CAD$ 0.00';
 
-    // Cari ay kazancını/gelirini hesapla
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const monthlyIncome = currentPaymentsData
-      .filter(p => p.payment_date && p.payment_date.startsWith(currentMonth))
-      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-    document.getElementById('financeSummaryThisMonth').textContent = formatMoney(monthlyIncome);
+    const expenseEl = document.getElementById('financeSummaryTotalExpense');
+    if (expenseEl) expenseEl.textContent = data.totalExpenseFormatted || 'CAD$ 0.00';
+
+    const balanceEl = document.getElementById('financeSummaryNetBalance');
+    if (balanceEl) {
+      balanceEl.textContent = data.netBalanceFormatted || 'CAD$ 0.00';
+      if ((data.netBalance || 0) >= 0) {
+        balanceEl.className = 'text-2xl font-bold font-heading text-emerald-400';
+      } else {
+        balanceEl.className = 'text-2xl font-bold font-heading text-rose-400';
+      }
+    }
 
     renderPaymentsTable(currentPaymentsData);
     refreshIcons();
@@ -717,7 +740,7 @@ function renderPaymentsTable(payments) {
   if (payments.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="text-center py-8 text-slate-400">
+        <td colspan="8" class="text-center py-8 text-slate-400">
           ${t('payments_table_empty')}
         </td>
       </tr>
@@ -733,6 +756,15 @@ function renderPaymentsTable(payments) {
     else if (pay.category === 'Yemek/Yol' || pay.category === 'Food/Travel') catClass = 'badge-category-yemek';
     else if (pay.category === 'Prim' || pay.category === 'Bonus') catClass = 'badge-category-prim';
 
+    const isIncome = pay.type === 'income';
+    const typeBadge = isIncome
+      ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap"><i data-lucide="arrow-down-left" class="w-3 h-3"></i> ${t('badge_income')}</span>`
+      : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30 whitespace-nowrap"><i data-lucide="arrow-up-right" class="w-3 h-3"></i> ${t('badge_expense')}</span>`;
+
+    const amountDisplay = isIncome
+      ? `<span class="font-bold font-mono text-emerald-400 whitespace-nowrap">+ ${pay.amountFormatted}</span>`
+      : `<span class="font-bold font-mono text-rose-400 whitespace-nowrap">- ${pay.amountFormatted}</span>`;
+
     return `
       <tr class="hover:bg-slate-900/40 transition">
         <!-- Tarih -->
@@ -740,7 +772,12 @@ function renderPaymentsTable(payments) {
           ${formatDate(pay.payment_date)}
         </td>
 
-        <!-- Ödeme Yapan / Alan -->
+        <!-- Tür -->
+        <td class="py-3 px-3 whitespace-nowrap">
+          ${typeBadge}
+        </td>
+
+        <!-- Kişi / Firma / Kurum -->
         <td class="py-3 px-3 font-semibold text-white whitespace-nowrap">
           ${pay.recipient}
         </td>
@@ -758,8 +795,8 @@ function renderPaymentsTable(payments) {
         </td>
 
         <!-- Tutar -->
-        <td class="py-3 px-3 font-bold font-mono text-amber-300 whitespace-nowrap">
-          ${pay.amountFormatted}
+        <td class="py-3 px-3 whitespace-nowrap">
+          ${amountDisplay}
         </td>
 
         <!-- Not -->
@@ -839,8 +876,8 @@ function exportShiftsToCSV() {
 
   const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
   const headers = isTr
-    ? ['ID', 'Tarih', 'Çalışan Adı Soyadı', 'Çalışma Yeri / Şantiye', 'Konum (Google Maps)', 'Giriş Saati', 'Çıkış Saati', 'Toplam Süre (Dakika)', 'Hesaplanan Süre', 'Notlar']
-    : ['ID', 'Date', 'Employee Full Name', 'Workplace / Site', 'Location (Google Maps)', 'Check-in Time', 'Check-out Time', 'Duration (Minutes)', 'Formatted Duration', 'Notes'];
+    ? ['ID', 'Tarih', 'Çalışan Adı Soyadı', 'Çalışma Yeri', 'Giriş Konumu (Google Maps)', 'Çıkış Konumu (Google Maps)', 'Giriş Saati', 'Çıkış Saati', 'Toplam Süre (Dakika)', 'Hesaplanan Süre', 'Notlar']
+    : ['ID', 'Date', 'Employee Full Name', 'Workplace', 'Check-in Location (Google Maps)', 'Check-out Location (Google Maps)', 'Check-in Time', 'Check-out Time', 'Duration (Minutes)', 'Formatted Duration', 'Notes'];
 
   const rows = currentShiftsData.map(s => [
     s.id,
@@ -848,6 +885,7 @@ function exportShiftsToCSV() {
     `"${(s.employee_name || '').replace(/"/g, '""')}"`,
     `"${(s.workplace || '').replace(/"/g, '""')}"`,
     (s.entry_latitude && s.entry_longitude) ? `"https://www.google.com/maps?q=${s.entry_latitude},${s.entry_longitude}"` : '"-"',
+    (s.checkout_latitude && s.checkout_longitude) ? `"https://www.google.com/maps?q=${s.checkout_latitude},${s.checkout_longitude}"` : '"-"',
     s.entry_time ? s.entry_time.replace('T', ' ') : '',
     (s.status === 'active' || !s.exit_time) ? '-' : s.exit_time.replace('T', ' '),
     s.duration_minutes || 0,
@@ -867,21 +905,22 @@ function exportPaymentsToCSV() {
 
   const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
   const headers = isTr
-    ? ['ID', 'Ödeme Tarihi', 'Ödeme Yapan / Alan', 'Kategori', 'Ödeme Yöntemi', 'Tutar (CAD$)', 'Açıklama']
-    : ['ID', 'Payment Date', 'Paid To / Recipient', 'Category', 'Payment Method', 'Amount (CAD$)', 'Notes'];
+    ? ['ID', 'Ödeme Tarihi', 'İşlem Türü', 'Kişi / Firma / Kurum', 'Kategori', 'Ödeme Yöntemi', 'Tutar (CAD$)', 'Açıklama']
+    : ['ID', 'Payment Date', 'Transaction Type', 'Person / Company / Client', 'Category', 'Payment Method', 'Amount (CAD$)', 'Notes'];
 
   const rows = currentPaymentsData.map(p => [
     p.id,
     formatDate(p.payment_date),
+    `"${p.type === 'income' ? (isTr ? 'Gelir (+)' : 'Income (+)') : (isTr ? 'Gider (-)' : 'Expense (-)')}"`,
     `"${(p.recipient || '').replace(/"/g, '""')}"`,
     `"${translateCategory(p.category)}"`,
     `"${p.payment_method || 'Nakit'}"`,
-    p.amount,
+    p.type === 'income' ? `+${p.amount}` : `-${p.amount}`,
     `"${(p.notes || '').replace(/"/g, '""')}"`
   ]);
 
   const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
-  downloadFile(csvContent, `Payment_Report_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+  downloadFile(csvContent, `Finance_Report_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
 }
 
 function downloadFile(content, fileName, mimeType) {
@@ -965,20 +1004,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Vardiya Filtre Dinleyicileri
   const shiftSearchInput = document.getElementById('shiftSearchInput');
-  const shiftWorkplaceFilter = document.getElementById('shiftWorkplaceFilter');
   const shiftStartDate = document.getElementById('shiftStartDate');
   const shiftEndDate = document.getElementById('shiftEndDate');
   const resetShiftFiltersBtn = document.getElementById('resetShiftFiltersBtn');
 
   if (shiftSearchInput) shiftSearchInput.addEventListener('input', debounce(loadShifts, 300));
-  if (shiftWorkplaceFilter) shiftWorkplaceFilter.addEventListener('change', loadShifts);
   if (shiftStartDate) shiftStartDate.addEventListener('change', loadShifts);
   if (shiftEndDate) shiftEndDate.addEventListener('change', loadShifts);
 
   if (resetShiftFiltersBtn) {
     resetShiftFiltersBtn.addEventListener('click', () => {
       if (shiftSearchInput) shiftSearchInput.value = '';
-      if (shiftWorkplaceFilter) shiftWorkplaceFilter.value = '';
       if (shiftStartDate) shiftStartDate.value = '';
       if (shiftEndDate) shiftEndDate.value = '';
       loadShifts();
@@ -1048,13 +1084,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const paymentSearchInput = document.getElementById('paymentSearchInput');
+  const paymentTypeFilter = document.getElementById('paymentTypeFilter');
   const paymentCategoryFilter = document.getElementById('paymentCategoryFilter');
   const paymentMethodFilter = document.getElementById('paymentMethodFilter');
 
   if (paymentSearchInput) paymentSearchInput.addEventListener('input', debounce(loadPayments, 300));
+  if (paymentTypeFilter) paymentTypeFilter.addEventListener('change', loadPayments);
   if (paymentCategoryFilter) paymentCategoryFilter.addEventListener('change', loadPayments);
   if (paymentMethodFilter) paymentMethodFilter.addEventListener('change', loadPayments);
   document.getElementById('exportPaymentsCsvBtn')?.addEventListener('click', exportPaymentsToCSV);
+
+  // İşlem Türü Değişimi Dinleyicisi
+  document.querySelectorAll('input[name="paymentType"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const isIncome = radio.value === 'income';
+      const submitBtn = document.getElementById('submitPaymentBtn');
+      const submitBtnText = submitBtn?.querySelector('span');
+      if (submitBtnText) {
+        submitBtnText.textContent = isIncome ? (t('type_income') || 'Gelir Kaydet') : (t('btn_save_payment') || 'Gideri Kaydet');
+      }
+    });
+  });
 
   // Yeni Ödeme Formu Gönderimi
   const paymentForm = document.getElementById('paymentForm');
@@ -1062,6 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     paymentForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const type = document.querySelector('input[name="paymentType"]:checked')?.value || 'expense';
       const payment_date = document.getElementById('paymentDate').value;
       const amount = parseFloat(document.getElementById('paymentAmount').value);
       const recipient = document.getElementById('paymentRecipient').value.trim();
@@ -1078,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch('/api/payments', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ payment_date, amount, recipient, category, payment_method, notes })
+          body: JSON.stringify({ type, payment_date, amount, recipient, category, payment_method, notes })
         });
 
         const data = await res.json();
@@ -1094,6 +1145,9 @@ document.addEventListener('DOMContentLoaded', () => {
           });
 
           paymentForm.reset();
+          // Varsayılan radio'yu expense'e geri al
+          const defaultRadio = document.querySelector('input[name="paymentType"][value="expense"]');
+          if (defaultRadio) defaultRadio.checked = true;
           if (paymentDateInput) paymentDateInput.value = new Date().toISOString().slice(0, 10);
           loadPayments();
           loadDashboardData();
