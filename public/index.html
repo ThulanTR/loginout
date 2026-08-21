@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <!-- Sağ Taraf: Canlı Saat, Yönetici Giriş Butonu & Bayraklı Dil Seçici (En Sağ) -->
+      <!-- Sağ Taraf: Canlı Saat & Yönetici Giriş Butonu -->
       <div class="flex items-center space-x-2.5 sm:space-x-3.5">
         
         <!-- Canlı Saat (Orta-Sağ) -->
@@ -78,31 +78,6 @@
           <i data-lucide="lock" class="w-4 h-4 text-indigo-400"></i>
           <span data-i18n="portal_admin_login">Yönetici Girişi</span>
         </button>
-
-        <!-- Bayraklı Dil Seçici (TR 🇹🇷 / EN 🇨🇦 - En Sağ Köşe) -->
-        <div class="inline-flex items-center bg-slate-900/80 border border-slate-700/60 p-1 rounded-xl shadow-inner backdrop-blur-md">
-          <!-- Türkçe Seçeneği -->
-          <button 
-            onclick="setLanguage('tr')" 
-            id="lang-btn-tr"
-            type="button"
-            class="lang-btn-tr flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
-            <span class="text-sm leading-none">🇹🇷</span>
-            <span>TR</span>
-          </button>
-
-          <div class="w-[1px] h-3.5 bg-slate-700 mx-0.5"></div>
-
-          <!-- İngilizce (Kanada) Seçeneği -->
-          <button 
-            onclick="setLanguage('en')" 
-            id="lang-btn-en"
-            type="button"
-            class="lang-btn-en flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
-            <span class="text-sm leading-none">🇨🇦</span>
-            <span>EN</span>
-          </button>
-        </div>
 
       </div>
     </div>
@@ -270,6 +245,29 @@
 
         </div>
       </form>
+    </div>
+
+    <!-- Form Kartının Hemen Altı (Dil Seçici) -->
+    <div class="flex justify-center items-center mt-6">
+      <div class="inline-flex items-center bg-slate-900/80 border border-slate-700/60 p-1.5 rounded-xl shadow-lg backdrop-blur-md">
+        <button 
+          onclick="setLanguage('tr')" 
+          id="lang-btn-tr" 
+          type="button"
+          class="lang-btn-tr flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <span class="text-sm">🇹🇷</span>
+          <span>TR</span>
+        </button>
+        <div class="w-[1px] h-4 bg-slate-700 mx-1"></div>
+        <button 
+          onclick="setLanguage('en')" 
+          id="lang-btn-en" 
+          type="button"
+          class="lang-btn-en flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+          <span class="text-sm">🇨🇦</span>
+          <span>EN</span>
+        </button>
+      </div>
     </div>
 
   </main>
