@@ -2,6 +2,10 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'giriscikis-secret-token-key-2026-secure';
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ UYARI: Production ortamında özel bir JWT_SECRET belirlenmedi! Lütfen Railway Dashboard üzerinden güçlü bir JWT_SECRET ortam değişkeni tanımlayınız.');
+}
+
 // JWT Token oluşturma
 function generateToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });

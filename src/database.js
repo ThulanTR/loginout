@@ -3,8 +3,11 @@ const path = require('node:path');
 const fs = require('node:fs');
 const bcrypt = require('bcryptjs');
 
-// Veritabanı klasörünü güvenceye al
-const dataDir = path.join(__dirname, '..', 'data');
+// Veritabanı klasörünü güvenceye al (Dinamik DATA_DIR veya varsayılan ./data)
+const dataDir = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, '..', 'data');
+
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -12,11 +15,16 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'giriscikis.db');
 const db = new DatabaseSync(dbPath);
 
-// WAL modu ve performans ayarları
-db.exec(`
-  PRAGMA journal_mode = WAL;
-  PRAGMA foreign_keys = ON;
-`);
+// WAL modu, busy timeout ve performans ayarları
+try {
+  db.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA foreign_keys = ON;
+    PRAGMA busy_timeout = 5000;
+  `);
+} catch (pragmaErr) {
+  console.warn('⚠️ SQLite PRAGMA yapılandırma uyarısı:', pragmaErr.message);
+}
 
 // Tabloları oluştur
 function initDatabase() {

@@ -71,9 +71,26 @@ Klasör içindeki **`start.bat`** dosyasına çift tıklayın.
 
 ---
 
+## ☁️ Railway & Cloud Deployment (Production)
+
+Proje Railway, Render, Fly.io veya Docker container ortamlarında çalışmaya tam uyumludur.
+
+### Ortam Değişkenleri (Environment Variables)
+Railway Dashboard > **Variables** sekmesinden aşağıdaki değişkenleri tanımlayabilirsiniz:
+- `PORT`: Railway otomatik atar (varsayılan: `3000`).
+- `JWT_SECRET`: Güvenliğiniz için güçlü ve rastgele bir anahtar belirleyin.
+- `DATA_DIR`: Kalıcı veritabanı klasörü yolu (örn: Railway Persistent Volume için `/app/data` veya `./data`).
+- `NODE_ENV`: `production`
+
+### Kalıcı Veri Saklama (Volume)
+Railway'de yeniden dağıtımlarda (redeploy) verilerin silinmemesi için bir **Volume** ekleyip bağlama yolunu (mount path) `DATA_DIR` değişkeni ile eşleştirebilirsiniz (örn: `/app/data`).
+
+---
+
 ## 🛠️ Teknoloji Yığını
-- **Backend:** Node.js (v24 LTS) + Express.js + `node:sqlite`
+- **Backend:** Node.js (>=22.0.0 LTS) + Express.js + `node:sqlite`
 - **Frontend:** HTML5, Tailwind CSS, Vanilla JavaScript
 - **İkonlar:** Lucide Icons
 - **Bildirimler:** SweetAlert2
 - **Grafikler:** Chart.js
+
