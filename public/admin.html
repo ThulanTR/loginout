@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Yönetici Kontrol Paneli - Personel Takip & Finans</title>
+  <title data-i18n="admin_panel_title">Yönetici Kontrol Paneli - Personel Takip & Finans</title>
   <meta name="description" content="Personel mesai saatleri ve finansal ödeme yönetim paneli">
 
   <!-- Tailwind CSS CDN -->
@@ -60,25 +60,26 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-base sm:text-lg font-bold font-heading text-white">Yönetici Paneli</h1>
+            <h1 class="text-base sm:text-lg font-bold font-heading text-white" data-i18n="admin_panel_title">Yönetici Paneli</h1>
             <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-semibold border border-emerald-500/30 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Çevrimiçi
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> <span data-i18n="admin_online">Çevrimiçi</span>
             </span>
           </div>
-          <p class="text-xs text-slate-400 hidden sm:block">Personel Takip & Finans Yönetim Sistemi</p>
+          <p class="text-xs text-slate-400 hidden sm:block" data-i18n="admin_subtitle">Personel Takip & Finans Yönetim Sistemi</p>
         </div>
       </div>
 
-      <!-- Sağ: Hızlı Butonlar, Yönetici Profili ve Çıkış -->
+      <!-- Sağ: Hızlı Butonlar, Yönetici Profili, Çıkış & Bayraklı Dil Seçici (En Sağ) -->
       <div class="flex items-center space-x-2 sm:space-x-3">
-        <a href="/" target="_blank" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Yeni sekmede çalışan bildirim formunu aç">
+        
+        <a href="/" target="_blank" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Yeni sekmede çalışan bildirim formunu aç" data-i18n-title="admin_portal_link">
           <i data-lucide="external-link" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span>Çalışan Portali</span>
+          <span data-i18n="admin_portal_link">Çalışan Portali</span>
         </a>
 
-        <button id="openChangePassBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Şifre Değiştir">
+        <button id="openChangePassBtn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Şifre Değiştir" data-i18n-title="admin_change_pass">
           <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span class="hidden md:inline">Şifre Değiştir</span>
+          <span class="hidden md:inline" data-i18n="admin_change_pass">Şifre Değiştir</span>
         </button>
 
         <div class="h-6 w-px bg-slate-800 hidden sm:block"></div>
@@ -90,10 +91,35 @@
           <span id="adminDisplayName" class="text-xs font-medium text-slate-200 hidden lg:inline">Sistem Yöneticisi</span>
         </div>
 
-        <button id="logoutBtn" class="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1.5">
+        <button id="logoutBtn" class="p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium border border-rose-500/30 transition flex items-center gap-1.5" title="Çıkış" data-i18n-title="admin_logout">
           <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span class="hidden sm:inline">Çıkış</span>
+          <span class="hidden sm:inline" data-i18n="admin_logout">Çıkış</span>
         </button>
+
+        <!-- Bayraklı Dil Seçici (TR 🇹🇷 / EN 🇨🇦 - En Sağ Köşe) -->
+        <div class="inline-flex items-center bg-slate-900/80 border border-slate-700/60 p-1 rounded-xl shadow-inner backdrop-blur-md">
+          <!-- Türkçe Seçeneği -->
+          <button 
+            onclick="setLanguage('tr')" 
+            id="lang-btn-tr"
+            type="button"
+            class="lang-btn-tr flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+            <span class="text-sm leading-none">🇹🇷</span>
+            <span>TR</span>
+          </button>
+
+          <div class="w-[1px] h-3.5 bg-slate-700 mx-0.5"></div>
+
+          <!-- İngilizce (Kanada) Seçeneği -->
+          <button 
+            onclick="setLanguage('en')" 
+            id="lang-btn-en"
+            type="button"
+            class="lang-btn-en flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+            <span class="text-sm leading-none">🇨🇦</span>
+            <span>EN</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -102,18 +128,18 @@
       
       <button data-tab="dashboard" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30">
         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-        <span>Genel Bakış & Özet</span>
+        <span data-i18n="tab_dashboard">Genel Bakış & Özet</span>
       </button>
 
       <button data-tab="shifts" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-transparent">
         <i data-lucide="users" class="w-4 h-4"></i>
-        <span>Personel Giriş-Çıkış Kayıtları</span>
+        <span data-i18n="tab_shifts">Personel Giriş-Çıkış Kayıtları</span>
         <span id="tabShiftsBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-slate-200 font-mono">0</span>
       </button>
 
       <button data-tab="finance" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white border border-transparent">
         <i data-lucide="wallet" class="w-4 h-4"></i>
-        <span>Finans & Ödeme Yönetimi</span>
+        <span data-i18n="tab_finance">Finans & Ödeme Yönetimi</span>
         <span id="tabFinanceBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-slate-200 font-mono">CAD$</span>
       </button>
 
@@ -134,7 +160,7 @@
         <!-- Kart 1: Toplam Giriş-Çıkış Kaydı -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400">Toplam Vardiya Kaydı</span>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_shifts">Toplam Vardiya Kaydı</span>
             <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
               <i data-lucide="clipboard-list" class="w-5 h-5 text-blue-400"></i>
             </div>
@@ -142,7 +168,7 @@
           <div class="flex items-baseline justify-between">
             <h3 id="statTotalShifts" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0</h3>
             <span class="text-xs text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-500/20 flex items-center gap-1">
-              <i data-lucide="check" class="w-3 h-3"></i> Aktif Veri
+              <i data-lucide="check" class="w-3 h-3"></i> <span data-i18n="stat_active_data">Aktif Veri</span>
             </span>
           </div>
         </div>
@@ -150,7 +176,7 @@
         <!-- Kart 2: Bugün Çalışan Personel -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400">Bugün Çalışan Personel</span>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_today_active">Bugün Çalışan Personel</span>
             <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i>
             </div>
@@ -158,7 +184,7 @@
           <div class="flex items-baseline justify-between">
             <h3 id="statTodayActive" class="text-2xl sm:text-3xl font-extrabold font-heading text-white">0</h3>
             <span class="text-xs text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1">
-              <i data-lucide="activity" class="w-3 h-3"></i> Bugün
+              <i data-lucide="activity" class="w-3 h-3"></i> <span data-i18n="stat_today">Bugün</span>
             </span>
           </div>
         </div>
@@ -166,28 +192,28 @@
         <!-- Kart 3: Toplam Alınan Ödeme -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400">Toplam Alınan Ödeme</span>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_total_payments">Toplam Yapılan Ödeme</span>
             <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <i data-lucide="banknote" class="w-5 h-5 text-amber-400"></i>
             </div>
           </div>
           <div class="flex items-baseline justify-between">
             <h3 id="statTotalPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-amber-300">CAD$ 0.00</h3>
-            <span class="text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/20">Genel Kasa</span>
+            <span class="text-xs text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/20" data-i18n="stat_general_cash">Genel Kasa</span>
           </div>
         </div>
 
         <!-- Kart 4: Bu Ayki Kazanç -->
         <div class="glass-card rounded-2xl p-5 border border-slate-700/60">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-slate-400">Bu Ayki Kazanç</span>
+            <span class="text-xs font-medium text-slate-400" data-i18n="stat_this_month_payments">Bu Ayki Gider / Ödeme</span>
             <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
               <i data-lucide="calendar" class="w-5 h-5 text-purple-400"></i>
             </div>
           </div>
           <div class="flex items-baseline justify-between">
             <h3 id="statThisMonthPayments" class="text-xl sm:text-2xl font-extrabold font-heading text-purple-300">CAD$ 0.00</h3>
-            <span class="text-xs text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-500/20">Bu Ay</span>
+            <span class="text-xs text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded-md border border-purple-500/20" data-i18n="stat_this_month">Bu Ay</span>
           </div>
         </div>
 
@@ -201,9 +227,9 @@
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
               <i data-lucide="bar-chart-3" class="w-5 h-5 text-indigo-400"></i>
-              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Son 7 Günlük Çalışma Saati Dağılımı</h4>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base" data-i18n="chart_weekly_hours_title">Son 7 Günlük Çalışma Saati Dağılımı</h4>
             </div>
-            <span class="text-xs text-slate-400">Saat Bazında</span>
+            <span class="text-xs text-slate-400" data-i18n="chart_weekly_hours_sub">Saat Bazında</span>
           </div>
           <div class="relative h-64 w-full">
             <canvas id="weeklyHoursChart"></canvas>
@@ -215,12 +241,13 @@
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
               <i data-lucide="pie-chart" class="w-5 h-5 text-purple-400"></i>
-              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Gider / Kategori Dağılımı</h4>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base" data-i18n="chart_category_title">Gider / Kategori Dağılımı</h4>
             </div>
-            <span class="text-xs text-slate-400">CAD$ Tutarları</span>
+            <span class="text-xs text-slate-400" data-i18n="chart_category_sub">CAD$ Tutarları</span>
           </div>
           <div class="relative h-64 w-full flex items-center justify-center">
             <canvas id="categoryDistributionChart"></canvas>
+            <div id="categoryChartEmpty" class="hidden text-xs text-slate-500 text-center py-6" data-i18n="timeline_empty">Henüz bir hareket bulunmuyor.</div>
           </div>
         </div>
 
@@ -234,16 +261,16 @@
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
               <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
-              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base">Son Hareketler Zaman Çizelgesi (Timeline)</h4>
+              <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base" data-i18n="timeline_title">Son Hareketler Zaman Çizelgesi (Timeline)</h4>
             </div>
             <button id="refreshDashboardBtn" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Yenile
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> <span data-i18n="btn_refresh">Yenile</span>
             </button>
           </div>
 
           <!-- Zaman Çizelgesi Akış Listesi -->
           <div id="timelineContainer" class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-            <div class="text-xs text-slate-400 text-center py-6">Hareketler yükleniyor...</div>
+            <div class="text-xs text-slate-400 text-center py-6" data-i18n="timeline_loading">Hareketler yükleniyor...</div>
           </div>
         </div>
 
@@ -252,9 +279,9 @@
           <div>
             <h4 class="font-heading font-bold text-slate-200 text-sm sm:text-base mb-3 flex items-center gap-2">
               <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
-              <span>Hızlı İşlemler</span>
+              <span data-i18n="quick_actions_title">Hızlı İşlemler</span>
             </h4>
-            <p class="text-xs text-slate-400 leading-relaxed mb-4">
+            <p class="text-xs text-slate-400 leading-relaxed mb-4" data-i18n="quick_actions_desc">
               Sık kullanılan işlemleri doğrudan buradan tek tıkla başlatabilirsiniz.
             </p>
 
@@ -262,7 +289,7 @@
               <button id="quickAddPaymentBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
                 <span class="flex items-center gap-2">
                   <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-                  <span>Yeni Ödeme Kaydı Ekle</span>
+                  <span data-i18n="quick_add_payment">Yeni Ödeme Kaydı Ekle</span>
                 </span>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
               </button>
@@ -270,7 +297,7 @@
               <button id="quickAddShiftBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
                 <span class="flex items-center gap-2">
                   <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
-                  <span>Manuel Giriş-Çıkış Gir</span>
+                  <span data-i18n="quick_add_shift">Manuel Giriş-Çıkış Gir</span>
                 </span>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
               </button>
@@ -278,7 +305,7 @@
               <button id="quickExportShiftsBtn" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 flex items-center justify-between transition">
                 <span class="flex items-center gap-2">
                   <i data-lucide="file-spreadsheet" class="w-4 h-4 text-purple-400"></i>
-                  <span>Vardiya Excel (CSV) Raporu Al</span>
+                  <span data-i18n="quick_export_shifts">Vardiya Excel (CSV) Raporu Al</span>
                 </span>
                 <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
               </button>
@@ -288,9 +315,9 @@
           <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-xs text-indigo-200 space-y-1">
             <div class="font-bold flex items-center gap-1.5">
               <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
-              <span>İpucu</span>
+              <span data-i18n="tip_title">İpucu</span>
             </div>
-            <p class="text-[11px] text-indigo-300">
+            <p class="text-[11px] text-indigo-300" data-i18n="tip_desc">
               Kayıtları çalışan adına veya tarih aralığına göre filtreleyebilir ve anında PDF/Yazdır çıktısı alabilirsiniz.
             </p>
           </div>
@@ -314,21 +341,21 @@
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <i data-lucide="filter" class="w-5 h-5 text-indigo-400"></i>
-            <h3 class="font-heading font-bold text-slate-200 text-base">Vardiya Kayıtları Filtreleme</h3>
+            <h3 class="font-heading font-bold text-slate-200 text-base" data-i18n="shift_filter_title">Vardiya Kayıtları Filtreleme</h3>
           </div>
 
           <div class="flex items-center gap-2 flex-wrap">
             <button id="addManualShiftBtn" class="px-3.5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold flex items-center gap-1.5 shadow">
               <i data-lucide="plus" class="w-4 h-4"></i>
-              <span>+ Manuel Kayıt Ekle</span>
+              <span data-i18n="btn_add_manual_shift">+ Manuel Kayıt Ekle</span>
             </button>
             <button id="exportShiftsCsvBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
               <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Excel (CSV)</span>
+              <span data-i18n="btn_export_csv">Excel (CSV)</span>
             </button>
             <button id="printShiftsBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
               <i data-lucide="printer" class="w-3.5 h-3.5 text-blue-400"></i>
-              <span>Yazdır</span>
+              <span data-i18n="btn_print">Yazdır</span>
             </button>
           </div>
         </div>
@@ -337,33 +364,33 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
           <!-- İsim / Not Arama -->
           <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Personel / Not Ara</label>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_search_label">Personel / Not Ara</label>
             <div class="relative">
               <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5"></i>
-              <input type="text" id="shiftSearchInput" placeholder="İsim veya not..." class="w-full pl-8 pr-3 py-1.5 rounded-lg custom-input text-xs">
+              <input type="text" id="shiftSearchInput" placeholder="İsim veya not..." data-i18n-placeholder="filter_search_placeholder" class="w-full pl-8 pr-3 py-1.5 rounded-lg custom-input text-xs">
             </div>
           </div>
 
           <!-- Şantiye / Bölüm Seçimi -->
           <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Çalışma Yeri / Şantiye</label>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_workplace_label">Çalışma Yeri / Şantiye</label>
             <select id="shiftWorkplaceFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
-              <option value="">Tümü (Tüm Şantiyeler)</option>
+              <option value="" data-i18n="filter_all_workplaces">Tümü (Tüm Şantiyeler)</option>
             </select>
           </div>
 
           <!-- Başlangıç Tarihi -->
           <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Başlangıç Tarihi</label>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_start_date">Başlangıç Tarihi</label>
             <input type="date" id="shiftStartDate" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
           </div>
 
           <!-- Bitiş Tarihi ve Filtre Temizle -->
           <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Bitiş Tarihi</label>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1" data-i18n="filter_end_date">Bitiş Tarihi</label>
             <div class="flex gap-2">
               <input type="date" id="shiftEndDate" class="flex-1 px-3 py-1.5 rounded-lg custom-input text-xs">
-              <button id="resetShiftFiltersBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs border border-slate-700" title="Filtreleri Sıfırla">
+              <button id="resetShiftFiltersBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs border border-slate-700" title="Filtreleri Sıfırla" data-i18n-title="filter_reset_title">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -375,10 +402,10 @@
       <!-- Filtre Özet Bilgi Şeridi -->
       <div class="flex items-center justify-between px-2 text-xs text-slate-400">
         <div>
-          Listelenen Kayıt: <strong id="shiftCountText" class="text-white">0</strong> | 
-          Toplam Çalışma: <strong id="shiftTotalHoursText" class="text-emerald-400">0 Saat</strong>
+          <span data-i18n="summary_listed_shifts">Listelenen Kayıt:</span> <strong id="shiftCountText" class="text-white">0</strong> | 
+          <span data-i18n="summary_total_work">Toplam Çalışma:</span> <strong id="shiftTotalHoursText" class="text-emerald-400">0 Saat</strong>
         </div>
-        <div class="text-[11px] text-slate-500">Tarihe göre yeniden eskiye sıralı</div>
+        <div class="text-[11px] text-slate-500" data-i18n="summary_order_desc">Tarihe göre yeniden eskiye sıralı</div>
       </div>
 
       <!-- Giriş-Çıkış Kayıtları Tablosu -->
@@ -387,20 +414,20 @@
           <table class="w-full text-left text-xs sm:text-sm">
             <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 text-[11px] uppercase tracking-wider">
               <tr>
-                <th class="py-3.5 px-4">Tarih</th>
-                <th class="py-3.5 px-4">Çalışan Adı Soyadı</th>
-                <th class="py-3.5 px-4">Çalışma Yeri / Şantiye</th>
-                <th class="py-3.5 px-4">Konum</th>
-                <th class="py-3.5 px-4">Giriş Saati</th>
-                <th class="py-3.5 px-4">Çıkış Saati</th>
-                <th class="py-3.5 px-4">Toplam Süre</th>
-                <th class="py-3.5 px-4">Notlar</th>
-                <th class="py-3.5 px-4 text-right no-print">İşlemler</th>
+                <th class="py-3.5 px-4" data-i18n="th_date">Tarih</th>
+                <th class="py-3.5 px-4" data-i18n="th_employee_name">Çalışan Adı Soyadı</th>
+                <th class="py-3.5 px-4" data-i18n="th_workplace">Çalışma Yeri / Şantiye</th>
+                <th class="py-3.5 px-4" data-i18n="th_location">Konum</th>
+                <th class="py-3.5 px-4" data-i18n="th_entry_time">Giriş Saati</th>
+                <th class="py-3.5 px-4" data-i18n="th_exit_time">Çıkış Saati</th>
+                <th class="py-3.5 px-4" data-i18n="th_duration">Toplam Süre</th>
+                <th class="py-3.5 px-4" data-i18n="th_notes">Notlar</th>
+                <th class="py-3.5 px-4 text-right no-print" data-i18n="th_actions">İşlemler</th>
               </tr>
             </thead>
             <tbody id="shiftsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
               <tr>
-                <td colspan="9" class="text-center py-8 text-slate-400">Kayıtlar yükleniyor...</td>
+                <td colspan="9" class="text-center py-8 text-slate-400" data-i18n="shifts_table_loading">Kayıtlar yükleniyor...</td>
               </tr>
             </tbody>
           </table>
@@ -419,17 +446,17 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1">Toplam Alınan Ödeme</div>
+          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_total_payment">Toplam Alınan Ödeme</div>
           <div id="financeSummaryTotal" class="text-2xl font-bold font-heading text-white">CAD$ 0.00</div>
         </div>
 
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1">Bu Ayki Kazanç</div>
+          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_this_month">Bu Ayki Kazanç</div>
           <div id="financeSummaryThisMonth" class="text-2xl font-bold font-heading text-emerald-400">CAD$ 0.00</div>
         </div>
 
         <div class="glass-card rounded-2xl p-4.5 border border-slate-700/60">
-          <div class="text-xs font-medium text-slate-400 mb-1">Toplam Ödeme Sayısı</div>
+          <div class="text-xs font-medium text-slate-400 mb-1" data-i18n="finance_total_count">Toplam Ödeme Sayısı</div>
           <div id="financeSummaryCount" class="text-2xl font-bold font-heading text-indigo-400">0 İşlem</div>
         </div>
 
@@ -446,8 +473,8 @@
               <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
             </div>
             <div>
-              <h3 class="font-heading font-bold text-white text-base">Yeni Ödeme Kaydı Ekle</h3>
-              <p class="text-xs text-slate-400">Maaş, avans veya şantiye gideri kaydedin</p>
+              <h3 class="font-heading font-bold text-white text-base" data-i18n="form_new_payment_title">Yeni Ödeme Kaydı Ekle</h3>
+              <p class="text-xs text-slate-400" data-i18n="form_new_payment_desc">Maaş, avans veya şantiye gideri kaydedin</p>
             </div>
           </div>
 
@@ -456,8 +483,8 @@
             <!-- Ödeme Tarihi -->
             <div>
               <label for="paymentDate" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
-                <span>Ödeme Tarihi <span class="text-rose-400">*</span></span>
-                <button type="button" id="setPaymentTodayBtn" class="text-[11px] text-indigo-400 hover:text-indigo-300">Bugün</button>
+                <span><span data-i18n="form_payment_date">Ödeme Tarihi</span> <span class="text-rose-400">*</span></span>
+                <button type="button" id="setPaymentTodayBtn" class="text-[11px] text-indigo-400 hover:text-indigo-300" data-i18n="form_today_btn">Bugün</button>
               </label>
               <input type="date" id="paymentDate" required class="w-full px-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm">
             </div>
@@ -465,7 +492,7 @@
             <!-- Tutar (CAD$) -->
             <div>
               <label for="paymentAmount" class="block text-xs font-medium text-slate-300 mb-1">
-                Tutar (CAD$) <span class="text-rose-400">*</span>
+                <span data-i18n="form_amount">Tutar (CAD$)</span> <span class="text-rose-400">*</span>
               </label>
               <div class="relative">
                 <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">CAD$</span>
@@ -481,16 +508,17 @@
               </div>
             </div>
 
-            <!-- Ödeme Yapan -->
+            <!-- Ödeme Yapan / Alan -->
             <div>
               <label for="paymentRecipient" class="block text-xs font-medium text-slate-300 mb-1">
-                Ödeme Yapan <span class="text-rose-400">*</span>
+                <span data-i18n="form_recipient">Ödeme Yapan / Alan</span> <span class="text-rose-400">*</span>
               </label>
               <input 
                 type="text" 
                 id="paymentRecipient" 
                 required 
                 placeholder="Ödeme yapan kişi / personel / konu" 
+                data-i18n-placeholder="form_recipient_placeholder"
                 class="w-full px-3.5 py-2.5 rounded-xl custom-input text-xs sm:text-sm"
               >
             </div>
@@ -499,33 +527,34 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label for="paymentCategory" class="block text-xs font-medium text-slate-300 mb-1">
-                  Kategori <span class="text-rose-400">*</span>
+                  <span data-i18n="form_category">Kategori</span> <span class="text-rose-400">*</span>
                 </label>
                 <select id="paymentCategory" required class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
-                  <option value="Maaş">Maaş</option>
-                  <option value="Malzeme">Malzeme</option>
-                  <option value="Diğer">Diğer</option>
+                  <option value="Maaş" data-i18n="cat_salary">Maaş</option>
+                  <option value="Malzeme" data-i18n="cat_material">Malzeme</option>
+                  <option value="Diğer" data-i18n="cat_other">Diğer</option>
                 </select>
               </div>
 
               <div>
-                <label for="paymentMethod" class="block text-xs font-medium text-slate-300 mb-1">Ödeme Yöntemi</label>
+                <label for="paymentMethod" class="block text-xs font-medium text-slate-300 mb-1" data-i18n="form_method">Ödeme Yöntemi</label>
                 <select id="paymentMethod" class="w-full px-3 py-2.5 rounded-xl custom-input text-xs">
-                  <option value="Nakit">Nakit</option>
-                  <option value="Banka Havalesi">Banka Havalesi</option>
+                  <option value="Nakit" data-i18n="method_cash">Nakit</option>
+                  <option value="Banka Havalesi" data-i18n="method_bank">Banka Havalesi</option>
                 </select>
               </div>
             </div>
 
             <!-- Ödeme Notu -->
             <div>
-              <label for="paymentNotes" class="block text-xs font-medium text-slate-300 mb-1">
+              <label for="paymentNotes" class="block text-xs font-medium text-slate-300 mb-1" data-i18n="form_notes">
                 Ödeme Notu / Açıklama
               </label>
               <textarea 
                 id="paymentNotes" 
                 rows="2" 
                 placeholder="Ödeme açıklaması (opsiyonel)..." 
+                data-i18n-placeholder="form_notes_placeholder"
                 class="w-full px-3.5 py-2 rounded-xl custom-input text-xs resize-none"
               ></textarea>
             </div>
@@ -537,7 +566,7 @@
               class="w-full py-3 px-4 rounded-xl text-white font-semibold text-xs sm:text-sm gradient-btn-success flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
             >
               <i data-lucide="check" class="w-4 h-4"></i>
-              <span>Ödemeyi Kaydet</span>
+              <span data-i18n="btn_save_payment">Ödemeyi Kaydet</span>
             </button>
           </form>
 
@@ -550,13 +579,13 @@
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
             <div class="flex items-center gap-2">
               <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
-              <h3 class="font-heading font-bold text-slate-200 text-base">Ödeme Geçmişi ve Kasa Çıkışları</h3>
+              <h3 class="font-heading font-bold text-slate-200 text-base" data-i18n="payment_history_title">Ödeme Geçmişi ve Kasa Çıkışları</h3>
             </div>
             
             <div class="flex items-center gap-2">
               <button id="exportPaymentsCsvBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
                 <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span>Excel (CSV)</span>
+                <span data-i18n="btn_export_csv">Excel (CSV)</span>
               </button>
             </div>
           </div>
@@ -564,21 +593,21 @@
           <!-- Filtreler -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
-              <input type="text" id="paymentSearchInput" placeholder="Ödeme yapan veya not ara..." class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
+              <input type="text" id="paymentSearchInput" placeholder="Ödeme yapan veya not ara..." data-i18n-placeholder="filter_payment_search" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
             </div>
             <div>
               <select id="paymentCategoryFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
-                <option value="">Tüm Kategoriler</option>
-                <option value="Maaş">Maaş</option>
-                <option value="Malzeme">Malzeme</option>
-                <option value="Diğer">Diğer</option>
+                <option value="" data-i18n="filter_all_categories">Tüm Kategoriler</option>
+                <option value="Maaş" data-i18n="cat_salary">Maaş</option>
+                <option value="Malzeme" data-i18n="cat_material">Malzeme</option>
+                <option value="Diğer" data-i18n="cat_other">Diğer</option>
               </select>
             </div>
             <div>
               <select id="paymentMethodFilter" class="w-full px-3 py-1.5 rounded-lg custom-input text-xs">
-                <option value="">Tüm Yöntemler</option>
-                <option value="Nakit">Nakit</option>
-                <option value="Banka Havalesi">Banka Havalesi</option>
+                <option value="" data-i18n="filter_all_methods">Tüm Yöntemler</option>
+                <option value="Nakit" data-i18n="method_cash">Nakit</option>
+                <option value="Banka Havalesi" data-i18n="method_bank">Banka Havalesi</option>
               </select>
             </div>
           </div>
@@ -588,18 +617,18 @@
             <table class="w-full text-left text-xs">
               <thead class="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800 text-[11px] uppercase">
                 <tr>
-                  <th class="py-3 px-3">Tarih</th>
-                  <th class="py-3 px-3">Ödeme Yapan</th>
-                  <th class="py-3 px-3">Kategori</th>
-                  <th class="py-3 px-3">Yöntem</th>
-                  <th class="py-3 px-3">Tutar</th>
-                  <th class="py-3 px-3">Not</th>
-                  <th class="py-3 px-3 text-right no-print">İşlem</th>
+                  <th class="py-3 px-3" data-i18n="th_date">Tarih</th>
+                  <th class="py-3 px-3" data-i18n="th_recipient">Ödeme Yapılan</th>
+                  <th class="py-3 px-3" data-i18n="th_category">Kategori</th>
+                  <th class="py-3 px-3" data-i18n="th_method">Yöntem</th>
+                  <th class="py-3 px-3" data-i18n="th_amount">Tutar</th>
+                  <th class="py-3 px-3" data-i18n="th_note">Not</th>
+                  <th class="py-3 px-3 text-right no-print" data-i18n="th_action">İşlem</th>
                 </tr>
               </thead>
               <tbody id="paymentsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
                 <tr>
-                  <td colspan="7" class="text-center py-6 text-slate-400">Ödemeler yükleniyor...</td>
+                  <td colspan="7" class="text-center py-6 text-slate-400" data-i18n="payments_table_loading">Ödemeler yükleniyor...</td>
                 </tr>
               </tbody>
             </table>
@@ -624,40 +653,40 @@
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <h3 id="shiftModalTitle" class="text-lg font-bold font-heading text-white mb-4">Manuel Giriş-Çıkış Kaydı Ekle</h3>
+      <h3 id="shiftModalTitle" class="text-lg font-bold font-heading text-white mb-4" data-i18n="modal_manual_shift_title">Manuel Giriş-Çıkış Kaydı Ekle</h3>
 
       <form id="modalShiftForm" class="space-y-4">
         <input type="hidden" id="modalShiftId">
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Çalışan Adı Soyadı *</label>
-          <input type="text" id="modalEmployeeName" required placeholder="Personel adı soyadı" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_employee_name_req">Çalışan Adı Soyadı *</label>
+          <input type="text" id="modalEmployeeName" required placeholder="Personel adı soyadı" data-i18n-placeholder="modal_employee_name_placeholder" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Çalışma Yeri / Şantiye *</label>
-          <input type="text" id="modalWorkplace" required placeholder="Çalışma yeri / şantiye" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_workplace_req">Çalışma Yeri / Şantiye *</label>
+          <input type="text" id="modalWorkplace" required placeholder="Çalışma yeri / şantiye" data-i18n-placeholder="modal_workplace_placeholder" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Giriş Saati *</label>
+            <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_entry_time_req">Giriş Saati *</label>
             <input type="datetime-local" id="modalEntryTime" required class="w-full px-3 py-2 rounded-xl custom-input text-xs">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Çıkış Saati</label>
+            <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_exit_time">Çıkış Saati</label>
             <input type="datetime-local" id="modalExitTime" class="w-full px-3 py-2 rounded-xl custom-input text-xs">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">İş / Vardiya Notu</label>
-          <textarea id="modalNotes" rows="2" placeholder="İş / vardiya notu (opsiyonel)..." class="w-full px-3.5 py-2 rounded-xl custom-input text-xs resize-none"></textarea>
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_notes">İş / Vardiya Notu</label>
+          <textarea id="modalNotes" rows="2" placeholder="İş / vardiya notu (opsiyonel)..." data-i18n-placeholder="modal_notes_placeholder" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs resize-none"></textarea>
         </div>
 
         <div class="pt-2 flex justify-end gap-2">
-          <button type="button" id="cancelShiftModalBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
-          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold">Kaydet</button>
+          <button type="button" id="cancelShiftModalBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium" data-i18n="btn_cancel">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold" data-i18n="btn_save">Kaydet</button>
         </div>
       </form>
     </div>
@@ -670,29 +699,31 @@
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <h3 class="text-lg font-bold font-heading text-white mb-1">Yönetici Şifresini Değiştir</h3>
-      <p class="text-xs text-slate-400 mb-4">Mevcut şifrenizi doğrulayarak yeni şifre belirleyin.</p>
+      <h3 class="text-lg font-bold font-heading text-white mb-1" data-i18n="modal_change_pass_title">Yönetici Şifresini Değiştir</h3>
+      <p class="text-xs text-slate-400 mb-4" data-i18n="modal_change_pass_desc">Mevcut şifrenizi doğrulayarak yeni şifre belirleyin.</p>
 
       <form id="changePassForm" class="space-y-4">
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Mevcut Şifre</label>
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_current_pass">Mevcut Şifre</label>
           <input type="password" id="currentPassword" required class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Yeni Şifre (En az 5 karakter)</label>
+          <label class="block text-xs font-medium text-slate-300 mb-1" data-i18n="modal_new_pass">Yeni Şifre (En az 5 karakter)</label>
           <input type="password" id="newPassword" required minlength="5" class="w-full px-3.5 py-2 rounded-xl custom-input text-xs sm:text-sm">
         </div>
 
         <div class="pt-2 flex justify-end gap-2">
-          <button type="button" id="cancelChangePassBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">Vazgeç</button>
-          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold">Şifreyi Güncelle</button>
+          <button type="button" id="cancelChangePassBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium" data-i18n="btn_cancel">Vazgeç</button>
+          <button type="submit" class="px-5 py-2 rounded-xl gradient-btn-primary text-white text-xs font-semibold" data-i18n="btn_update_pass">Şifreyi Güncelle</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- JavaScript Dosyası -->
+  <!-- JavaScript Dosyaları (Translations & i18n & Admin) -->
+  <script src="js/translations.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>

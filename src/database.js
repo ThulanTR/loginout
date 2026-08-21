@@ -107,12 +107,11 @@ function initDatabase() {
     console.error('Migrasyon kontrolü hatası:', migErr);
   }
 
-  seedDataIfEmpty();
+  ensureAdminUserExists();
 }
 
-// Varsayılan yönetici ve örnek gerçekçi veriler
-function seedDataIfEmpty() {
-  // Yönetici kontrolü
+// Varsayılan yönetici kontrolü ve oluşturma (admin / admin123)
+function ensureAdminUserExists() {
   const adminStmt = db.prepare('SELECT COUNT(*) as count FROM admins');
   const adminCount = adminStmt.get().count;
 
@@ -126,185 +125,19 @@ function seedDataIfEmpty() {
     insertAdmin.run('admin', hash, 'Sistem Yöneticisi');
     console.log('✅ Varsayılan yönetici oluşturuldu (Kullanıcı: admin, Şifre: admin123)');
   }
+}
 
-  // Örnek Vardiya Verileri kontrolü
-  const shiftStmt = db.prepare('SELECT COUNT(*) as count FROM shifts');
-  const shiftCount = shiftStmt.get().count;
-
-  if (shiftCount === 0) {
-    const insertShift = db.prepare(`
-      INSERT INTO shifts (employee_name, workplace, entry_time, exit_time, duration_minutes, status, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+// Tüm sahte / örnek verileri temizleme fonksiyonu
+function clearAllShiftAndPaymentData() {
+  try {
+    db.exec(`
+      DELETE FROM shifts;
+      DELETE FROM payments;
+      DELETE FROM sqlite_sequence WHERE name IN ('shifts', 'payments');
     `);
-
-    const now = new Date();
-    const formatDate = (daysAgo, hours, minutes) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - daysAgo);
-      d.setHours(hours, minutes, 0, 0);
-      return d.toISOString().slice(0, 16);
-    };
-
-    const sampleShifts = [
-      {
-        name: 'Ahmet Yılmaz',
-        place: 'Merkez Şantiye - Blok A',
-        entry: formatDate(0, 8, 30),
-        exit: formatDate(0, 17, 30),
-        duration: 540,
-        status: 'completed',
-        notes: 'Temel beton dökümü ve kalıp kontrolü tamamlandı.'
-      },
-      {
-        name: 'Mehmet Demir',
-        place: 'Kuzey Projesi',
-        entry: formatDate(0, 9, 0),
-        exit: formatDate(0, 18, 0),
-        duration: 540,
-        status: 'completed',
-        notes: 'Elektrik tesisatı döşendi ve kablo kanalları çekildi.'
-      },
-      {
-        name: 'Ayşe Kaya',
-        place: 'Merkez Ofis',
-        entry: formatDate(0, 8, 45),
-        exit: formatDate(0, 17, 45),
-        duration: 540,
-        status: 'completed',
-        notes: 'Haftalık malzeme siparişleri ve hakediş kontrolleri yapıldı.'
-      },
-      {
-        name: 'Mustafa Çelik',
-        place: 'Güney Depo',
-        entry: formatDate(1, 8, 0),
-        exit: formatDate(1, 16, 30),
-        duration: 510,
-        status: 'completed',
-        notes: 'Gelen hammadde sayımı ve sevkiyat organizasyonu.'
-      },
-      {
-        name: 'Emre Şahin',
-        place: 'Merkez Şantiye - Blok B',
-        entry: formatDate(1, 8, 15),
-        exit: formatDate(1, 18, 45),
-        duration: 630,
-        status: 'completed',
-        notes: 'Duvar örme ve sıva hazırlık işlemleri tamamlandı.'
-      },
-      {
-        name: 'Fatma Yıldız',
-        place: 'Merkez Ofis',
-        entry: formatDate(2, 9, 0),
-        exit: formatDate(2, 18, 0),
-        duration: 540,
-        status: 'completed',
-        notes: 'Müşteri sözleşmeleri ve personel bordroları düzenlendi.'
-      },
-      {
-        name: 'Burak Koç',
-        place: 'Kuzey Projesi',
-        entry: formatDate(2, 8, 30),
-        exit: formatDate(2, 17, 0),
-        duration: 510,
-        status: 'completed',
-        notes: 'Sıhhi tesisat borulama ve basınç testleri yapıldı.'
-      },
-      {
-        name: 'Ahmet Yılmaz',
-        place: 'Merkez Şantiye - Blok A',
-        entry: formatDate(3, 8, 0),
-        exit: formatDate(3, 17, 30),
-        duration: 570,
-        status: 'completed',
-        notes: 'Demir bağlama ve zemin kotlama çalışmaları.'
-      }
-    ];
-
-    sampleShifts.forEach(s => {
-      insertShift.run(s.name, s.place, s.entry, s.exit, s.duration, s.status || 'completed', s.notes);
-    });
-    console.log('✅ Örnek personel giriş-çıkış kayıtları oluşturuldu.');
-  }
-
-  // Örnek Finans / Ödeme Verileri kontrolü
-  const payStmt = db.prepare('SELECT COUNT(*) as count FROM payments');
-  const payCount = payStmt.get().count;
-
-  if (payCount === 0) {
-    const insertPay = db.prepare(`
-      INSERT INTO payments (payment_date, amount, recipient, category, payment_method, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
-    `);
-
-    const formatDateOnly = (daysAgo) => {
-      const d = new Date();
-      d.setDate(d.getDate() - daysAgo);
-      return d.toISOString().slice(0, 10);
-    };
-
-    const samplePayments = [
-      {
-        date: formatDateOnly(1),
-        amount: 28500.0,
-        recipient: 'Ahmet Yılmaz',
-        category: 'Maaş',
-        method: 'Banka Havalesi',
-        notes: 'Ağustos ayı hak ediş / maaş ödemesi'
-      },
-      {
-        date: formatDateOnly(2),
-        amount: 14200.0,
-        recipient: 'Özdemir Yapı Market Ltd.',
-        category: 'Malzeme',
-        method: 'Banka Havalesi',
-        notes: 'Çimento, demir bağ teli ve harç katkı malzemeleri alımı'
-      },
-      {
-        date: formatDateOnly(3),
-        amount: 5000.0,
-        recipient: 'Mehmet Demir',
-        category: 'Maaş',
-        method: 'Nakit',
-        notes: 'Haftalık acil avans ödemesi'
-      },
-      {
-        date: formatDateOnly(4),
-        amount: 3250.0,
-        recipient: 'Lezzet Catering & Yemek',
-        category: 'Diğer',
-        method: 'Nakit',
-        notes: 'Şantiye personeli haftalık öğle yemeği bedeli'
-      },
-      {
-        date: formatDateOnly(6),
-        amount: 7500.0,
-        recipient: 'Akaryakıt İstasyonu',
-        category: 'Malzeme',
-        method: 'Banka Havalesi',
-        notes: 'Şantiye kepçe ve servis araçları mazot ikmali'
-      },
-      {
-        date: formatDateOnly(8),
-        amount: 26000.0,
-        recipient: 'Mustafa Çelik',
-        category: 'Maaş',
-        method: 'Banka Havalesi',
-        notes: 'Aylık hakediş ve mesai ödemesi'
-      },
-      {
-        date: formatDateOnly(10),
-        amount: 4500.0,
-        recipient: 'Emre Şahin',
-        category: 'Diğer',
-        method: 'Nakit',
-        notes: 'Erken teslim ve performans başarı primi'
-      }
-    ];
-
-    samplePayments.forEach(p => {
-      insertPay.run(p.date, p.amount, p.recipient, p.category, p.method, p.notes);
-    });
-    console.log('✅ Örnek finans ve ödeme kayıtları oluşturuldu.');
+    console.log('🧹 Tüm vardiya ve ödeme kayıtları temizlendi.');
+  } catch (err) {
+    console.warn('Veri temizleme uyarısı:', err.message);
   }
 }
 
@@ -313,5 +146,8 @@ initDatabase();
 
 module.exports = {
   db,
-  initDatabase
+  initDatabase,
+  ensureAdminUserExists,
+  clearAllShiftAndPaymentData
 };
+

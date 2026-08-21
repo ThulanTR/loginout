@@ -4,11 +4,12 @@
 
 // Global Kronometre Değişkeni
 let stopwatchInterval = null;
+let currentActiveShift = null;
 
 // Lucide İkonlarını Başlat
 function refreshIcons() {
-  if (window.lucide) {
-    lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
   }
 }
 
@@ -28,19 +29,16 @@ function parseDateSafely(dateInput) {
 
   const str = String(dateInput).trim();
 
-  // 1. Standart Date ayrıştırması (Z ile biten UTC ISO stringlerini tüm tarayıcılarda evrensel olarak doğru çözer)
   let d = new Date(str);
   if (!isNaN(d.getTime())) {
     return d;
   }
 
-  // 2. Safari / eski webview'lar için boşluklu formatı 'T' ve 'Z' ile dene (örn: "2026-08-20 14:30:00")
   if (str.includes(' ') && !str.includes('T')) {
     d = new Date(str.replace(' ', 'T') + (str.includes('Z') ? '' : 'Z'));
     if (!isNaN(d.getTime())) return d;
   }
 
-  // 3. Fallback: Z içermeyen eski string'ler için UTC Z ekleyerek dene
   if (!str.endsWith('Z') && !str.includes('+')) {
     d = new Date(str + 'Z');
     if (!isNaN(d.getTime())) return d;
@@ -56,6 +54,7 @@ function startLiveClock() {
 
   function update() {
     const now = new Date();
+    const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
     const options = {
       weekday: 'long',
       year: 'numeric',
@@ -65,7 +64,7 @@ function startLiveClock() {
       minute: '2-digit',
       second: '2-digit'
     };
-    clockEl.textContent = now.toLocaleDateString('tr-TR', options);
+    clockEl.textContent = now.toLocaleDateString(isTr ? 'tr-TR' : 'en-US', options);
   }
 
   update();
@@ -106,12 +105,6 @@ function startStopwatch(entryTimeISO) {
     clearInterval(stopwatchInterval);
     stopwatchInterval = null;
   }
-  const parsed = parseDateSafely(entryTimeISO);
-  if (parsed) {
-    const diffSec = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 1000));
-    console.log('[Canlı Sayaç]', { entryTime: entryTimeISO, parsedUTC: parsed.toISOString(), nowUTC: new Date().toISOString(), diffSeconds: diffSec });
-  }
-  // İlk çalıştırmada 1 saniye beklemeden anında ekrana yansıt
   updateStopwatch(entryTimeISO);
   stopwatchInterval = setInterval(() => {
     updateStopwatch(entryTimeISO);
@@ -131,6 +124,7 @@ function stopStopwatch() {
 
 // Durum 1: Başlangıç Durumu (Açık Vardiya Yok)
 function setInitialState() {
+  currentActiveShift = null;
   stopStopwatch();
 
   const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -175,7 +169,7 @@ function setInitialState() {
   if (endBtn) endBtn.classList.add('hidden');
 
   const statusText = document.getElementById('portalStatusText');
-  if (statusText) statusText.textContent = 'Otomatik Sunucu Zamanlı Vardiya Takibi';
+  if (statusText) statusText.textContent = t('portal_status_auto');
 
   const statusBadge = document.getElementById('portalStatusBadge');
   if (statusBadge) {
@@ -188,6 +182,7 @@ function setInitialState() {
 // Durum 2: Aktif Vardiya Durumu (Giriş Yapıldı, Kronometre Çalışıyor)
 function setActiveShiftState(shift) {
   if (!shift || !shift.entry_time) return;
+  currentActiveShift = shift;
 
   const employeeInput = document.getElementById('employeeName');
   if (employeeInput) {
@@ -217,8 +212,9 @@ function setActiveShiftState(shift) {
 
   const entryDisplay = document.getElementById('activeEntryTimeDisplay');
   if (entryDisplay) {
+    const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
     const entryDate = parseDateSafely(shift.entry_time) || new Date();
-    entryDisplay.textContent = entryDate.toLocaleString('tr-TR', {
+    entryDisplay.textContent = entryDate.toLocaleString(isTr ? 'tr-TR' : 'en-US', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -241,7 +237,7 @@ function setActiveShiftState(shift) {
   if (endBtn) endBtn.classList.remove('hidden');
 
   const statusText = document.getElementById('portalStatusText');
-  if (statusText) statusText.textContent = `Vardiya Aktif: ${shift.employee_name}`;
+  if (statusText) statusText.textContent = `${t('portal_status_active_prefix')}${shift.employee_name}`;
 
   const statusBadge = document.getElementById('portalStatusBadge');
   if (statusBadge) {
@@ -271,26 +267,21 @@ async function checkActiveShiftOnLoad() {
       return;
     }
 
-    // Hemen UI'yi aç ki sayfa yenilendiğinde bekleme olmadan sayaç aksın
     setActiveShiftState(savedShift);
 
-    // Sunucudan aktifliğini doğrula
     try {
       const res = await fetch(`/api/shifts/active?id=${savedShift.id}`);
       const data = await res.json();
 
       if (data.success && data.hasActiveShift && data.shift) {
-        // Sunucu teyit etti, güncel veriyi sakla
         localStorage.setItem('activeShift', JSON.stringify(data.shift));
         setActiveShiftState(data.shift);
       } else {
-        // Vardiya sunucuda zaten kapatılmış veya silinmiş
-        console.warn('Açık vardiya sunucu tarafında bulunamadı, form sıfırlanıyor.');
         localStorage.removeItem('activeShift');
         setInitialState();
       }
     } catch (apiErr) {
-      console.warn('Sunucu doğrulama hatası (çevrimdışı olabilir):', apiErr);
+      console.warn('Sunucu doğrulama hatası:', apiErr);
     }
   } catch (err) {
     console.error('Kayıtlı vardiya verisi çözümlenemedi:', err);
@@ -323,66 +314,11 @@ async function loadSuggestions() {
 }
 
 // ==========================================
-// SON KAYITLARI GETİR (Mini Feed)
-// ==========================================
-async function loadRecentPublicShifts() {
-  const container = document.getElementById('recentPublicShiftsList');
-  if (!container) return;
-
-  try {
-    const shiftsRes = await fetch('/api/stats/dashboard', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken') || ''}`
-      }
-    });
-
-    if (shiftsRes.ok) {
-      const statsData = await shiftsRes.json();
-      if (statsData.success && statsData.timeline) {
-        const shiftEvents = statsData.timeline.filter(t => t.type === 'shift').slice(0, 4);
-        if (shiftEvents.length > 0) {
-          container.innerHTML = shiftEvents.map(s => {
-            const isAct = s.status === 'active';
-            return `
-              <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border ${isAct ? 'border-amber-500/30' : 'border-slate-800'} text-xs">
-                <div class="flex items-center gap-2">
-                  <div class="w-2 h-2 rounded-full ${isAct ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}"></div>
-                  <span class="font-semibold text-slate-200">${s.title}</span>
-                  <span class="text-slate-400">(${s.description})</span>
-                </div>
-                <span class="${isAct ? 'text-amber-400 font-semibold' : 'text-slate-500'} text-[11px]">${s.timeAgo}</span>
-              </div>
-            `;
-          }).join('');
-          refreshIcons();
-          return;
-        }
-      }
-    }
-
-    container.innerHTML = `
-      <div class="text-xs text-slate-400 text-center py-2 flex items-center justify-center gap-2">
-        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
-        <span>Sistem aktif. Giriş ve çıkışlar sunucu saatiyle kaydedilmektedir.</span>
-      </div>
-    `;
-    refreshIcons();
-  } catch (e) {
-    container.innerHTML = `
-      <div class="text-xs text-slate-400 text-center py-2">
-        Sistem aktif. Giriş ve çıkışlar sunucu saatiyle kaydedilmektedir.
-      </div>
-    `;
-  }
-}
-
-// ==========================================
 // GPS KONUM YARDIMCISI (Geolocation API)
 // ==========================================
 function getCurrentCoordinates() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      console.warn('Tarayıcı Geolocation API desteklemiyor.');
       resolve({ latitude: null, longitude: null, error: 'unsupported' });
       return;
     }
@@ -396,7 +332,6 @@ function getCurrentCoordinates() {
         });
       },
       (error) => {
-        console.warn('Konum izni verilmedi veya alınamadı:', error.message);
         resolve({ latitude: null, longitude: null, error: error.message });
       },
       {
@@ -422,11 +357,12 @@ async function handleStartShift() {
   if (!employee_name || !workplace) {
     Swal.fire({
       icon: 'warning',
-      title: 'Eksik Bilgi',
-      text: 'Lütfen Adınız Soyadınız ve Çalışma Yeri / Şantiye alanlarını doldurunuz.',
+      title: t('swal_missing_info'),
+      text: t('swal_fill_required'),
       background: '#1e293b',
       color: '#f8fafc',
-      confirmButtonColor: '#4f46e5'
+      confirmButtonColor: '#4f46e5',
+      confirmButtonText: t('swal_btn_ok')
     });
     return;
   }
@@ -438,7 +374,7 @@ async function handleStartShift() {
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
-    <span>Giriş Yapılıyor...</span>
+    <span>${t('portal_btn_checking_in')}</span>
   `;
 
   // Otomatik GPS Konumunu Al
@@ -459,58 +395,57 @@ async function handleStartShift() {
     const result = await res.json();
 
     if (res.ok && result.success) {
-      // LocalStorage'a kaydet
       localStorage.setItem('activeShift', JSON.stringify(result.shift));
-
-      // UI'yı aktif vardiya moduna geçir
       setActiveShiftState(result.shift);
 
       const hasGps = result.shift.entry_latitude && result.shift.entry_longitude;
       const locationNote = hasGps
-        ? `<div class="text-emerald-400 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline"></i> <span>GPS Konumu başarıyla kaydedildi.</span></div>`
-        : `<div class="text-amber-400 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5 inline"></i> <span>Konum alınamadı, giriş kaydınız konumsuz oluşturuldu.</span></div>`;
+        ? `<div class="text-emerald-400 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 inline"></i> <span>${t('swal_gps_success')}</span></div>`
+        : `<div class="text-amber-400 flex items-center gap-1.5"><i data-lucide="alert-circle" class="w-3.5 h-3.5 inline"></i> <span>${t('swal_gps_fail')}</span></div>`;
 
-      // Başarı bildirimi
-      const entryTimeFormatted = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleTimeString('tr-TR');
+      const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
+      const entryTimeFormatted = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleTimeString(isTr ? 'tr-TR' : 'en-US');
+      
       Swal.fire({
         icon: 'success',
-        title: 'Vardiya Başlatıldı!',
+        title: t('swal_shift_started_title'),
         html: `
-          <p class="text-sm text-slate-300 mb-2">Hoş geldiniz, <strong>${result.shift.employee_name}</strong>!</p>
+          <p class="text-sm text-slate-300 mb-2">${t('swal_welcome_prefix')}<strong>${result.shift.employee_name}</strong>!</p>
           <div class="p-3 bg-slate-800/80 rounded-xl text-xs text-slate-300 text-left space-y-2 border border-slate-700">
-            <div><strong class="text-indigo-300">Yer:</strong> ${result.shift.workplace}</div>
-            <div><strong class="text-emerald-400">Giriş Saati:</strong> ${entryTimeFormatted}</div>
+            <div><strong class="text-indigo-300">${t('swal_place')}</strong> ${result.shift.workplace}</div>
+            <div><strong class="text-emerald-400">${t('swal_entry_time')}</strong> ${entryTimeFormatted}</div>
             ${locationNote}
-            <div class="text-slate-400 font-medium">Kronometreniz çalışmaya başladı. İyi çalışmalar dileriz.</div>
+            <div class="text-slate-400 font-medium">${t('swal_timer_started')}</div>
           </div>
         `,
         background: '#1e293b',
         color: '#f8fafc',
         confirmButtonColor: '#10b981',
-        confirmButtonText: 'Tamam'
+        confirmButtonText: t('swal_btn_ok')
       });
 
       loadSuggestions();
-      loadRecentPublicShifts();
     } else {
       Swal.fire({
         icon: 'error',
-        title: 'Giriş Başarısız',
-        text: result.message || 'Giriş kaydı oluşturulurken bir hata oluştu.',
+        title: t('swal_checkin_failed'),
+        text: result.message || t('swal_checkin_failed'),
         background: '#1e293b',
         color: '#f8fafc',
-        confirmButtonColor: '#4f46e5'
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: t('swal_btn_ok')
       });
     }
   } catch (error) {
     console.error('Giriş isteği hatası:', error);
     Swal.fire({
       icon: 'error',
-      title: 'Bağlantı Hatası',
-      text: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olunuz.',
+      title: t('swal_conn_error_title'),
+      text: t('swal_conn_error_text'),
       background: '#1e293b',
       color: '#f8fafc',
-      confirmButtonColor: '#4f46e5'
+      confirmButtonColor: '#4f46e5',
+      confirmButtonText: t('swal_btn_ok')
     });
   } finally {
     startBtn.disabled = false;
@@ -527,11 +462,12 @@ async function handleEndShift() {
   if (!savedShiftStr) {
     Swal.fire({
       icon: 'warning',
-      title: 'Aktif Vardiya Bulunamadı',
-      text: 'Şu anda açık bir vardiyanız görünmüyor.',
+      title: t('swal_no_active_shift'),
+      text: t('swal_no_active_shift_text'),
       background: '#1e293b',
       color: '#f8fafc',
-      confirmButtonColor: '#4f46e5'
+      confirmButtonColor: '#4f46e5',
+      confirmButtonText: t('swal_btn_ok')
     });
     setInitialState();
     return;
@@ -539,25 +475,24 @@ async function handleEndShift() {
 
   const activeShift = JSON.parse(savedShiftStr);
   const existingNotes = document.getElementById('shiftNotes')?.value || '';
-
-  // Canlı sayaçtaki güncel süreyi al
   const currentDurationText = document.getElementById('stopwatchDisplay')?.textContent || '00:00:00';
-  const entryTimeDisplayStr = (parseDateSafely(activeShift.entry_time) || new Date()).toLocaleTimeString('tr-TR');
+  
+  const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
+  const entryTimeDisplayStr = (parseDateSafely(activeShift.entry_time) || new Date()).toLocaleTimeString(isTr ? 'tr-TR' : 'en-US');
 
-  // SweetAlert2 ile şık onay ve not alma modalı
   const { value: formValues, isConfirmed } = await Swal.fire({
-    title: 'Vardiyayı Tamamla',
+    title: t('swal_complete_shift_title'),
     html: `
       <div class="text-left space-y-3 mb-2 text-xs sm:text-sm">
-        <p class="text-slate-300"><strong>${activeShift.employee_name}</strong> için vardiya çıkışı yapılacak.</p>
+        <p class="text-slate-300"><strong>${activeShift.employee_name}</strong> ${t('swal_checkout_confirm_msg')}</p>
         <div class="p-3 bg-slate-800 rounded-xl space-y-1.5 border border-slate-700 text-xs">
-          <div><strong class="text-slate-400">Çalışma Yeri:</strong> ${activeShift.workplace}</div>
-          <div><strong class="text-slate-400">Giriş Saati:</strong> ${entryTimeDisplayStr}</div>
-          <div><strong class="text-emerald-400">Geçen Süre:</strong> <span class="font-mono font-bold text-emerald-300">${currentDurationText}</span></div>
+          <div><strong class="text-slate-400">${t('swal_place')}</strong> ${activeShift.workplace}</div>
+          <div><strong class="text-slate-400">${t('swal_entry_time')}</strong> ${entryTimeDisplayStr}</div>
+          <div><strong class="text-emerald-400">${t('swal_elapsed_time')}</strong> <span class="font-mono font-bold text-emerald-300">${currentDurationText}</span></div>
         </div>
         <div>
-          <label class="block text-slate-300 font-medium mb-1 text-xs">İş / Vardiya Notu (Opsiyonel):</label>
-          <textarea id="swalShiftNotes" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:ring-1 focus:ring-rose-500 focus:outline-none resize-none" rows="2" placeholder="Bugün yapılan işler veya notlar...">${existingNotes}</textarea>
+          <label class="block text-slate-300 font-medium mb-1 text-xs">${t('swal_optional_note_label')}</label>
+          <textarea id="swalShiftNotes" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:ring-1 focus:ring-rose-500 focus:outline-none resize-none" rows="2" placeholder="${t('swal_optional_note_placeholder')}">${existingNotes}</textarea>
         </div>
       </div>
     `,
@@ -565,8 +500,8 @@ async function handleEndShift() {
     showCancelButton: true,
     confirmButtonColor: '#e11d48',
     cancelButtonColor: '#475569',
-    confirmButtonText: 'Evet, Çıkış Yap',
-    cancelButtonText: 'Vazgeç',
+    confirmButtonText: t('swal_btn_yes_checkout'),
+    cancelButtonText: t('btn_cancel'),
     background: '#1e293b',
     color: '#f8fafc',
     preConfirm: () => {
@@ -588,7 +523,7 @@ async function handleEndShift() {
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
-    <span>Çıkış Kaydediliyor...</span>
+    <span>${t('portal_btn_checking_out')}</span>
   `;
 
   try {
@@ -601,69 +536,70 @@ async function handleEndShift() {
     const result = await res.json();
 
     if (res.ok && result.success) {
-      // LocalStorage temizle
       localStorage.removeItem('activeShift');
-
-      // Formu başlangıç durumuna sıfırla
       setInitialState();
 
-      // Şık Başarı Özeti Modalı
-      const entryTimeLocale = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleString('tr-TR');
-      const exitTimeLocale = (parseDateSafely(result.shift.exit_time) || new Date()).toLocaleString('tr-TR');
+      const entryTimeLocale = (parseDateSafely(result.shift.entry_time) || new Date()).toLocaleString(isTr ? 'tr-TR' : 'en-US');
+      const exitTimeLocale = (parseDateSafely(result.shift.exit_time) || new Date()).toLocaleString(isTr ? 'tr-TR' : 'en-US');
+      const durationFormatted = (typeof i18n !== 'undefined' && i18n.formatDurationI18n) 
+        ? i18n.formatDurationI18n(result.shift.duration_minutes) 
+        : result.shift.durationFormatted;
+
       Swal.fire({
         icon: 'success',
-        title: 'Çıkış Başarıyla Tamamlandı!',
+        title: t('swal_checkout_success_title'),
         html: `
-          <p class="text-sm text-slate-300 mb-3">Tebrikler <strong>${result.shift.employee_name}</strong>, bugünkü vardiya kaydınız veritabanına işlendi.</p>
+          <p class="text-sm text-slate-300 mb-3">${t('swal_checkout_success_msg', result.shift.employee_name)}</p>
           <div class="p-4 bg-slate-800/90 rounded-xl text-xs text-slate-200 text-left space-y-2 border border-slate-700">
             <div class="flex justify-between">
-              <span class="text-slate-400">Çalışma Yeri:</span>
+              <span class="text-slate-400">${t('swal_place')}</span>
               <strong class="text-white">${result.shift.workplace}</strong>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400">Giriş Saati:</span>
+              <span class="text-slate-400">${t('swal_entry_time')}</span>
               <span>${entryTimeLocale}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400">Çıkış Saati:</span>
+              <span class="text-slate-400">${t('th_exit_time')}:</span>
               <span>${exitTimeLocale}</span>
             </div>
             <div class="pt-2 border-t border-slate-700 flex justify-between items-center">
-              <span class="text-slate-300 font-semibold">Toplam Çalışma Süresi:</span>
+              <span class="text-slate-300 font-semibold">${t('swal_total_work_time')}</span>
               <span class="text-emerald-400 font-bold font-mono text-sm bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-500/30">
-                ${result.shift.durationFormatted}
+                ${durationFormatted}
               </span>
             </div>
-            ${result.shift.notes ? `<div class="pt-2 border-t border-slate-700/60 text-slate-300"><strong>Not:</strong> ${result.shift.notes}</div>` : ''}
+            ${result.shift.notes ? `<div class="pt-2 border-t border-slate-700/60 text-slate-300"><strong>${t('swal_note_label')}</strong> ${result.shift.notes}</div>` : ''}
           </div>
         `,
         background: '#1e293b',
         color: '#f8fafc',
         confirmButtonColor: '#4f46e5',
-        confirmButtonText: 'Tamam'
+        confirmButtonText: t('swal_btn_ok')
       });
 
       loadSuggestions();
-      loadRecentPublicShifts();
     } else {
       Swal.fire({
         icon: 'error',
-        title: 'Çıkış Başarısız',
-        text: result.message || 'Çıkış işlemi sırasında bir hata oluştu.',
+        title: t('swal_checkout_failed'),
+        text: result.message || t('swal_checkout_failed'),
         background: '#1e293b',
         color: '#f8fafc',
-        confirmButtonColor: '#4f46e5'
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: t('swal_btn_ok')
       });
     }
   } catch (error) {
     console.error('Çıkış hatası:', error);
     Swal.fire({
       icon: 'error',
-      title: 'Bağlantı Hatası',
-      text: 'Sunucuya ulaşılamadı. Lütfen internet bağlantınızı ve sunucuyu kontrol ediniz.',
+      title: t('swal_conn_error_title'),
+      text: t('swal_conn_error_text'),
       background: '#1e293b',
       color: '#f8fafc',
-      confirmButtonColor: '#4f46e5'
+      confirmButtonColor: '#4f46e5',
+      confirmButtonText: t('swal_btn_ok')
     });
   } finally {
     endBtn.disabled = false;
@@ -673,13 +609,39 @@ async function handleEndShift() {
 }
 
 // ==========================================
+// DİL DEĞİŞİKLİĞİ DİNLEYİCİSİ
+// ==========================================
+window.addEventListener('languageChanged', () => {
+  if (currentActiveShift) {
+    const statusText = document.getElementById('portalStatusText');
+    if (statusText) statusText.textContent = `${t('portal_status_active_prefix')}${currentActiveShift.employee_name}`;
+    
+    const entryDisplay = document.getElementById('activeEntryTimeDisplay');
+    if (entryDisplay && currentActiveShift.entry_time) {
+      const isTr = (typeof i18n !== 'undefined' && i18n.getCurrentLang() === 'tr');
+      const entryDate = parseDateSafely(currentActiveShift.entry_time) || new Date();
+      entryDisplay.textContent = entryDate.toLocaleString(isTr ? 'tr-TR' : 'en-US', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+  } else {
+    const statusText = document.getElementById('portalStatusText');
+    if (statusText) statusText.textContent = t('portal_status_auto');
+  }
+});
+
+// ==========================================
 // SAYFA YÜKLENDİĞİNDE BAŞLATICI
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   refreshIcons();
   startLiveClock();
   loadSuggestions();
-  loadRecentPublicShifts();
 
   // Aktif vardiya durumunu kontrol et
   checkActiveShiftOnLoad();
@@ -696,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     endShiftBtn.addEventListener('click', handleEndShift);
   }
 
-  // Form Submit engelle (Butonlar üzerinden çalışır)
+  // Form Submit engelle
   const shiftForm = document.getElementById('shiftForm');
   if (shiftForm) {
     shiftForm.addEventListener('submit', (e) => {
@@ -775,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <span>Giriş Yapılıyor...</span>
+        <span>${t('login_btn_submitting')}</span>
       `;
 
       try {
@@ -803,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           Toast.fire({
             icon: 'success',
-            title: 'Giriş Başarılı! Yönlendiriliyorsunuz...'
+            title: t('swal_login_success')
           });
 
           setTimeout(() => {
@@ -812,27 +774,29 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           Swal.fire({
             icon: 'error',
-            title: 'Giriş Başarısız',
-            text: data.message || 'Kullanıcı adı veya şifre hatalı.',
+            title: t('swal_login_failed'),
+            text: data.message || t('swal_login_failed'),
             background: '#1e293b',
             color: '#f8fafc',
-            confirmButtonColor: '#4f46e5'
+            confirmButtonColor: '#4f46e5',
+            confirmButtonText: t('swal_btn_ok')
           });
           submitBtn.disabled = false;
-          submitBtn.innerHTML = `<span>Panele Giriş Yap</span>`;
+          submitBtn.innerHTML = `<span>${t('login_btn_submit')}</span>`;
         }
       } catch (err) {
         console.error('Giriş isteği hatası:', err);
         Swal.fire({
           icon: 'error',
-          title: 'Hata',
-          text: 'Sunucuya ulaşılamadı.',
+          title: t('swal_conn_error_title'),
+          text: t('swal_conn_error_text'),
           background: '#1e293b',
           color: '#f8fafc',
-          confirmButtonColor: '#4f46e5'
+          confirmButtonColor: '#4f46e5',
+          confirmButtonText: t('swal_btn_ok')
         });
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>Panele Giriş Yap</span>`;
+        submitBtn.innerHTML = `<span>${t('login_btn_submit')}</span>`;
       }
     });
   }
