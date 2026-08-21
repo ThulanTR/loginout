@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../database');
+const { db, autoCloseStaleShifts } = require('../database');
 const { authenticateToken } = require('../auth');
 
 function formatCurrency(amount) {
@@ -15,23 +15,24 @@ function formatCurrency(amount) {
 function timeAgo(dateString) {
   if (!dateString) return '';
   const now = new Date();
-  const past = new Date(dateString);
-  const diffMs = now - past;
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMinutes < 1) return 'Az önce';
-  if (diffMinutes < 60) return `${diffMinutes} dakika önce`;
-  if (diffHours < 24) return `${diffHours} saat önce`;
-  if (diffDays === 1) return 'Dün';
-  if (diffDays < 30) return `${diffDays} gün önce`;
-  return past.toLocaleDateString('tr-TR');
+  const date = new Date(dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString.replace(' ', 'T') + 'Z');
+  const diffSec = Math.floor((now - date) / 1000);
+  if (diffSec < 60) return 'Az önce';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} dk önce`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} sa önce`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay} gün önce`;
 }
 
 // Dashboard Özet İstatistikleri (GET /api/stats/dashboard)
 router.get('/dashboard', authenticateToken, (req, res) => {
   try {
+    if (typeof autoCloseStaleShifts === 'function') {
+      autoCloseStaleShifts();
+    }
+
     const now = new Date();
     const currentMonthPrefix = now.toISOString().slice(0, 7); // "YYYY-MM"
     const todayPrefix = now.toISOString().slice(0, 10); // "YYYY-MM-DD"

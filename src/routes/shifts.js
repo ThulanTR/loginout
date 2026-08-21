@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../database');
+const { db, autoCloseStaleShifts } = require('../database');
 const { authenticateToken } = require('../auth');
 
 // Tarih formatlayıcı yardımcı: Her zaman evrensel UTC ISO-8601 formatı (Z sonlu)
@@ -52,6 +52,11 @@ router.get('/suggestions', (req, res) => {
 
 // 1. YENİ İŞ AKIŞI: Vardiyayı Başlat / Giriş Yap (POST /api/shifts/start)
 router.post('/start', (req, res) => {
+  // Önce süresi dolmuş (8 saat üzeri) açık vardiyaları otomatik kapat
+  if (typeof autoCloseStaleShifts === 'function') {
+    autoCloseStaleShifts();
+  }
+
   const { employee_name, workplace, work_location, department, latitude, longitude, entry_latitude, entry_longitude } = req.body;
   const targetWorkplace = workplace || work_location || department || '';
 
@@ -65,7 +70,7 @@ router.post('/start', (req, res) => {
   const cleanName = employee_name.trim();
   const cleanPlace = targetWorkplace ? targetWorkplace.trim() : '';
 
-  // GPS Konum ayrıştırma (varsa float, yoksa null)
+  // GPS Konum ayrıştırma
   const latVal = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude)))
     ? parseFloat(latitude)
     : (entry_latitude !== undefined && entry_latitude !== null && !isNaN(parseFloat(entry_latitude)) ? parseFloat(entry_latitude) : null);
@@ -74,19 +79,29 @@ router.post('/start', (req, res) => {
     ? parseFloat(longitude)
     : (entry_longitude !== undefined && entry_longitude !== null && !isNaN(parseFloat(entry_longitude)) ? parseFloat(entry_longitude) : null);
 
+  // GPS ZORUNLULUĞU: Konum bilgisi olmadan vardiya başlatılamaz
+  if (latVal === null || lngVal === null || isNaN(latVal) || isNaN(lngVal)) {
+    return res.status(400).json({
+      success: false,
+      gpsRequired: true,
+      message: 'Vardiya kaydının geçerli sayılabilmesi için yasal mevzuat ve şirket denetim kuralları gereği anlık GPS konum paylaşımı zorunludur. Lütfen tarayıcı ayarlarınızdan konum izni vererek tekrar deneyiniz.'
+    });
+  }
+
   try {
-    // Aynı çalışanın halihazırda açık bir vardiyası var mı kontrol et
+    // İsim bazlı (küçük/büyük harf duyarsız ve trimlenmiş) açık vardiya kontrolü
     const existingActive = db.prepare(`
       SELECT * FROM shifts 
-      WHERE employee_name = ? AND (status = 'active' OR exit_time IS NULL)
+      WHERE LOWER(TRIM(employee_name)) = LOWER(?) 
+        AND (status = 'active' OR exit_time IS NULL OR exit_time = '')
       ORDER BY id DESC LIMIT 1
     `).get(cleanName);
 
     if (existingActive) {
-      return res.status(200).json({
-        success: true,
+      return res.status(400).json({
+        success: false,
         alreadyActive: true,
-        message: `${cleanName} için halen devam eden aktif bir vardiya bulunmaktadır.`,
+        message: 'Bu çalışan adına zaten açık ve devam eden bir vardiya bulunmaktadır. Yeni giriş yapmadan önce mevcut vardiya sonlandırılmalıdır.',
         shiftId: existingActive.id,
         shift: {
           id: existingActive.id,
@@ -100,7 +115,7 @@ router.post('/start', (req, res) => {
       });
     }
 
-    // Sunucu saati ile UTC ISO formatında entry_time oluştur (Railway ve Localhost için evrensel Z formatı)
+    // Sunucu saati ile UTC ISO formatında entry_time oluştur (Manipülasyonu engellemek için)
     const entry_time = toIsoDateTime(new Date());
 
     const stmt = db.prepare(`
@@ -169,6 +184,15 @@ function handleShiftTermination(req, res, targetId) {
 
     const checkoutLocName = (checkout_location_name && checkout_location_name.trim() !== '') ? checkout_location_name.trim() : null;
 
+    // ÇIKIŞ GPS ZORUNLULUĞU: Konum olmadan vardiya sonlandırılamaz
+    if (checkoutLatVal === null || checkoutLngVal === null || isNaN(checkoutLatVal) || isNaN(checkoutLngVal)) {
+      return res.status(400).json({
+        success: false,
+        gpsRequired: true,
+        message: 'Vardiyanızı sonlandırabilmek için anlık GPS konumunuzun doğrulanması zorunludur. Lütfen tarayıcınızdan konum izni vererek tekrar çıkış yapınız.'
+      });
+    }
+
     // Eğer zaten tamamlanmışsa
     if (shift.status === 'completed' && shift.exit_time) {
       return res.status(200).json({
@@ -234,6 +258,10 @@ router.post('/end', (req, res) => handleShiftTermination(req, res));
 // 3. AKTİF VARDİYA SORGULAMA (Sayfa Yenileme ve Doğrulama - GET /api/shifts/active)
 router.get('/active', (req, res) => {
   try {
+    if (typeof autoCloseStaleShifts === 'function') {
+      autoCloseStaleShifts();
+    }
+
     const { employee_name, id } = req.query;
 
     let shift = null;
@@ -246,7 +274,7 @@ router.get('/active', (req, res) => {
     } else if (employee_name && employee_name.trim() !== '') {
       shift = db.prepare(`
         SELECT * FROM shifts 
-        WHERE employee_name = ? AND (status = 'active' OR exit_time IS NULL)
+        WHERE LOWER(TRIM(employee_name)) = LOWER(?) AND (status = 'active' OR exit_time IS NULL)
         ORDER BY id DESC LIMIT 1
       `).get(employee_name.trim());
     } else {
@@ -311,6 +339,33 @@ router.post('/', (req, res) => {
   try {
     const normalizedEntry = toIsoDateTime(entry_time);
     const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+
+    // Gelecek tarih ve mantıksal zaman kontrolü
+    const maxAllowedTime = new Date().getTime() + 60000;
+    const entryDate = new Date(normalizedEntry);
+    if (entryDate.getTime() > maxAllowedTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Giriş saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+      });
+    }
+
+    if (normalizedExit) {
+      const exitDate = new Date(normalizedExit);
+      if (exitDate.getTime() > maxAllowedTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+        });
+      }
+      if (exitDate.getTime() < entryDate.getTime()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati giriş saatinden önce olamaz.'
+        });
+      }
+    }
+
     let durationMinutes = 0;
     const status = normalizedExit ? 'completed' : 'active';
     if (normalizedExit) {
@@ -355,6 +410,10 @@ router.post('/', (req, res) => {
 // Yönetici: Tüm Giriş-Çıkış Kayıtlarını Listele ve Filtrele (GET /api/shifts)
 router.get('/', authenticateToken, (req, res) => {
   try {
+    if (typeof autoCloseStaleShifts === 'function') {
+      autoCloseStaleShifts();
+    }
+
     const { search, workplace, startDate, endDate, status } = req.query;
 
     let query = 'SELECT * FROM shifts WHERE 1=1';
@@ -465,6 +524,33 @@ router.post('/admin', authenticateToken, (req, res) => {
   try {
     const normalizedEntry = toIsoDateTime(entry_time);
     const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+
+    // Gelecek tarih ve mantıksal zaman kontrolü
+    const maxAllowedTime = new Date().getTime() + 60000;
+    const entryDate = new Date(normalizedEntry);
+    if (entryDate.getTime() > maxAllowedTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Giriş saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+      });
+    }
+
+    if (normalizedExit) {
+      const exitDate = new Date(normalizedExit);
+      if (exitDate.getTime() > maxAllowedTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+        });
+      }
+      if (exitDate.getTime() < entryDate.getTime()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati giriş saatinden önce olamaz.'
+        });
+      }
+    }
+
     const durationMinutes = normalizedExit ? calculateDurationMinutes(normalizedEntry, normalizedExit) : 0;
     const status = normalizedExit ? 'completed' : 'active';
 
@@ -518,6 +604,33 @@ router.put('/:id', authenticateToken, (req, res) => {
   try {
     const normalizedEntry = toIsoDateTime(entry_time);
     const normalizedExit = exit_time ? toIsoDateTime(exit_time) : null;
+
+    // Gelecek tarih ve mantıksal zaman kontrolü
+    const maxAllowedTime = new Date().getTime() + 60000;
+    const entryDate = new Date(normalizedEntry);
+    if (entryDate.getTime() > maxAllowedTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'Giriş saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+      });
+    }
+
+    if (normalizedExit) {
+      const exitDate = new Date(normalizedExit);
+      if (exitDate.getTime() > maxAllowedTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati sunucunun şu anki saatinden ileri bir tarih olamaz.'
+        });
+      }
+      if (exitDate.getTime() < entryDate.getTime()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Çıkış saati giriş saatinden önce olamaz.'
+        });
+      }
+    }
+
     const durationMinutes = normalizedExit ? calculateDurationMinutes(normalizedEntry, normalizedExit) : 0;
     const status = normalizedExit ? 'completed' : 'active';
 

@@ -380,6 +380,24 @@ async function handleStartShift() {
   // Otomatik GPS Konumunu Al
   const coords = await getCurrentCoordinates();
 
+  // GPS ZORUNLULUĞU KONTROLÜ (Yasal / Şirket Denetim Uyarısı)
+  if (!coords || coords.latitude === null || coords.longitude === null || isNaN(coords.latitude) || isNaN(coords.longitude)) {
+    startBtn.disabled = false;
+    startBtn.innerHTML = originalBtnHtml;
+    refreshIcons();
+
+    Swal.fire({
+      icon: 'warning',
+      title: t('swal_gps_required_title'),
+      text: t('swal_gps_required_msg'),
+      background: '#1e293b',
+      color: '#f8fafc',
+      confirmButtonColor: '#e11d48',
+      confirmButtonText: t('swal_btn_ok')
+    });
+    return;
+  }
+
   try {
     const res = await fetch('/api/shifts/start', {
       method: 'POST',
@@ -428,8 +446,8 @@ async function handleStartShift() {
       loadSuggestions();
     } else {
       Swal.fire({
-        icon: 'error',
-        title: t('swal_checkin_failed'),
+        icon: result.gpsRequired ? 'warning' : 'error',
+        title: result.gpsRequired ? t('swal_gps_required_title') : t('swal_checkin_failed'),
         text: result.message || t('swal_checkin_failed'),
         background: '#1e293b',
         color: '#f8fafc',
@@ -529,6 +547,24 @@ async function handleEndShift() {
   // Otomatik GPS Çıkış Konumunu Al
   const coords = await getCurrentCoordinates();
 
+  // ÇIKIŞ GPS ZORUNLULUĞU KONTROLÜ (Yasal / Şirket Denetim Uyarısı)
+  if (!coords || coords.latitude === null || coords.longitude === null || isNaN(coords.latitude) || isNaN(coords.longitude)) {
+    endBtn.disabled = false;
+    endBtn.innerHTML = originalBtnHtml;
+    refreshIcons();
+
+    Swal.fire({
+      icon: 'warning',
+      title: t('swal_checkout_gps_required_title'),
+      text: t('swal_checkout_gps_required_msg'),
+      background: '#1e293b',
+      color: '#f8fafc',
+      confirmButtonColor: '#e11d48',
+      confirmButtonText: t('swal_btn_ok')
+    });
+    return;
+  }
+
   try {
     const res = await fetch(`/api/shifts/${activeShift.id}/end`, {
       method: 'PUT',
@@ -601,8 +637,8 @@ async function handleEndShift() {
       loadSuggestions();
     } else {
       Swal.fire({
-        icon: 'error',
-        title: t('swal_checkout_failed'),
+        icon: result.gpsRequired ? 'warning' : 'error',
+        title: result.gpsRequired ? t('swal_checkout_gps_required_title') : t('swal_checkout_failed'),
         text: result.message || t('swal_checkout_failed'),
         background: '#1e293b',
         color: '#f8fafc',

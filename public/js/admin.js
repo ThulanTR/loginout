@@ -503,9 +503,14 @@ function renderShiftsTable(shifts) {
       ? i18n.formatDurationI18n(shift.duration_minutes) 
       : shift.durationFormatted;
 
+    const isAutoClosed = shift.is_auto_closed === 1 || (shift.notes && (shift.notes.includes('otomatik kapatıldı') || shift.notes.includes('8 saat')));
+    const autoCloseBadge = isAutoClosed 
+      ? `<div class="mt-1"><span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-semibold whitespace-nowrap" title="8 saat aşımı nedeniyle sistem tarafından otomatik kapatıldı"><i data-lucide="alert-triangle" class="w-3 h-3 text-amber-400"></i> <span>${t('badge_auto_closed')}</span></span></div>`
+      : '';
+
     const durationBadge = isActive 
       ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block"></span> ${t('badge_in_progress')}</span>`
-      : `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${shift.duration_minutes > 0 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'} whitespace-nowrap">${formattedDuration}</span>`;
+      : `<div><span class="px-2.5 py-1 rounded-md text-xs font-semibold ${shift.duration_minutes > 0 ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'} whitespace-nowrap">${formattedDuration}</span>${autoCloseBadge}</div>`;
 
     // Kompakt Yan Yana GPS Giriş & Çıkış Rozetleri
     const hasEntryLocation = shift.entry_latitude !== null && shift.entry_latitude !== undefined && shift.entry_longitude !== null && shift.entry_longitude !== undefined && !isNaN(shift.entry_latitude) && !isNaN(shift.entry_longitude);

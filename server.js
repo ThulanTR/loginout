@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('node:path');
 const cors = require('cors');
+const helmet = require('helmet');
 const { initDatabase } = require('./src/database');
 
 const app = express();
@@ -10,7 +11,8 @@ const HOST = '0.0.0.0';
 // Veritabanını başlat
 initDatabase();
 
-// Ara Katmanlar (Middlewares)
+// Ara Katmanlar (Middlewares) & Güvenlik Başlıkları
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

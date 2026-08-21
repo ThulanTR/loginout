@@ -44,6 +44,7 @@ function initDatabase() {
       checkout_latitude REAL,
       checkout_longitude REAL,
       checkout_location_name TEXT,
+      is_auto_closed INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now', 'localtime'))
     );
 
@@ -110,6 +111,12 @@ function initDatabase() {
       console.log('✅ shifts tablosuna checkout_location_name kolonu eklendi.');
     }
 
+    const hasAutoClosed = shiftCols.some(c => c.name === 'is_auto_closed');
+    if (!hasAutoClosed) {
+      db.exec("ALTER TABLE shifts ADD COLUMN is_auto_closed INTEGER DEFAULT 0");
+      console.log('✅ shifts tablosuna is_auto_closed kolonu eklendi.');
+    }
+
     // payments tablosu type kolonu kontrolü
     const paymentCols = db.prepare("PRAGMA table_info(payments)").all();
     const hasPaymentType = paymentCols.some(c => c.name === 'type');
@@ -138,7 +145,58 @@ function initDatabase() {
   }
 
   ensureAdminUserExists();
+  autoCloseStaleShifts();
 }
+
+// 8 Saat Üzeri Açık Unutulan Vardiyaları Otomatik Kapatma
+function autoCloseStaleShifts() {
+  try {
+    const openShifts = db.prepare(`
+      SELECT id, employee_name, entry_time, notes 
+      FROM shifts 
+      WHERE status = 'active' OR exit_time IS NULL OR exit_time = ''
+    `).all();
+
+    const now = new Date();
+    const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
+    const autoNote = '[SİSTEM: 8 saat aşımı nedeniyle otomatik kapatıldı / Açık unutuldu]';
+
+    let closedCount = 0;
+    openShifts.forEach(shift => {
+      if (!shift.entry_time) return;
+      const entryDate = new Date(shift.entry_time.endsWith('Z') || shift.entry_time.includes('+') ? shift.entry_time : shift.entry_time.replace(' ', 'T') + 'Z');
+      if (isNaN(entryDate.getTime())) return;
+
+      const elapsedMs = now.getTime() - entryDate.getTime();
+      if (elapsedMs >= EIGHT_HOURS_MS) {
+        // Çıkış saati = entry_time + 8 saat
+        const exitDate = new Date(entryDate.getTime() + EIGHT_HOURS_MS);
+        const exitTimeIso = exitDate.toISOString();
+        const durationMinutes = 480; // 8 saat
+        const newNotes = shift.notes 
+          ? (shift.notes.includes(autoNote) ? shift.notes : `${shift.notes}\n${autoNote}`) 
+          : autoNote;
+
+        db.prepare(`
+          UPDATE shifts 
+          SET exit_time = ?, duration_minutes = ?, status = 'completed', is_auto_closed = 1, notes = ?
+          WHERE id = ?
+        `).run(exitTimeIso, durationMinutes, newNotes, shift.id);
+
+        closedCount++;
+        console.log(`⚠️ Açık unutulan vardiya #${shift.id} (${shift.employee_name}) 8 saat kuralıyla otomatik kapatıldı.`);
+      }
+    });
+
+    return closedCount;
+  } catch (err) {
+    console.error('Otomatik vardiya kapatma hatası:', err.message);
+    return 0;
+  }
+}
+
+// Periyodik kontrol: 5 dakikada bir otomatik kontrol
+setInterval(autoCloseStaleShifts, 5 * 60 * 1000);
 
 // Varsayılan yönetici kontrolü ve oluşturma (admin / admin123)
 function ensureAdminUserExists() {
@@ -177,6 +235,7 @@ initDatabase();
 module.exports = {
   db,
   initDatabase,
+  autoCloseStaleShifts,
   ensureAdminUserExists,
   clearAllShiftAndPaymentData
 };
